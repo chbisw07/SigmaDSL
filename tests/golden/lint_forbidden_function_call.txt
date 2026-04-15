@@ -1,0 +1,1 @@
+tests/fixtures/lint/invalid/forbidden_function_call.sr:2:13 SD403 error: Forbidden function call (not whitelisted): 'now'

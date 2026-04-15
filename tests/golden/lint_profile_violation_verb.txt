@@ -1,0 +1,1 @@
+tests/fixtures/lint/invalid/profile_violation_verb.sr:3:14 SD410 error: Profile violation: only 'signal' profile is supported in v0.2; verb 'block_all_trades' is not allowed

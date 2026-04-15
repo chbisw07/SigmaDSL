@@ -36,6 +36,20 @@ Expected output:
 OK
 ```
 
+## Lint guardrails (v0.2-B)
+
+Run lint to enforce “Python-shaped but not Python” guardrails:
+
+```bash
+sigmadsl lint basic.sr
+```
+
+Expected output:
+
+```text
+OK
+```
+
 ## Try the sample pack (v0.1-B)
 
 Sprint v0.1-B ships a starter sample pack under `examples/`:
@@ -79,6 +93,14 @@ rule "EQ: Bad" in underlying:
 ```text
 ... SD300 error: Type mismatch in condition: expected Bool, got Price
 ```
+
+## Language guardrails (v0.2-B)
+
+See `docs/language_guardrails.md` for a concise explanation of:
+
+- forbidden constructs (assignments, loops, function defs),
+- function-call whitelist rules,
+- profile compliance (signal-only in v0.2).
 
 ## Limitations (intentional, for later sprints)
 

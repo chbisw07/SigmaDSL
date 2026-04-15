@@ -5,6 +5,7 @@ from pathlib import Path
 import typer
 
 from .diagnostics import Diagnostic
+from .linting import lint_paths
 from .validate import validate_paths
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -39,6 +40,20 @@ def validate(path: Path = typer.Argument(..., exists=True, readable=True)):
     """
 
     diags: list[Diagnostic] = validate_paths(path)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=1)
+    typer.echo("OK")
+
+
+@app.command()
+def lint(path: Path = typer.Argument(..., exists=True, readable=True)):
+    """
+    Lint SigmaDSL sources for guardrails and profile compliance.
+    """
+
+    diags: list[Diagnostic] = lint_paths(path)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))

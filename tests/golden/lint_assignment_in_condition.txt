@@ -1,0 +1,1 @@
+tests/fixtures/lint/invalid/assignment_in_condition.sr:2:12 SD400 error: Assignments are not allowed in SigmaDSL

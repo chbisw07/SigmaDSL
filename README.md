@@ -21,6 +21,15 @@ sigmadsl validate path/to/dir/   # validates all *.sr under the directory
 
 Exit code is `0` for valid input and non-zero if any diagnostics are produced.
 
+## Lint (Sprint 0.2-B)
+
+Lint enforces guardrails (forbidden constructs) and current profile compliance:
+
+```bash
+sigmadsl lint path/to/file.sr
+sigmadsl lint path/to/dir/
+```
+
 ## Examples (Sprint 0.1-B)
 
 Starter sample pack:

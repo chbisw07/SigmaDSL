@@ -1,0 +1,5 @@
+rule "EQ: Function Def" in underlying:
+    when true:
+        def helper(x):
+            then annotate(note="bad_def")
+

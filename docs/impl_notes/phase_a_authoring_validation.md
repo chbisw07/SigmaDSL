@@ -211,3 +211,40 @@ pytest
 sigmadsl validate tests/fixtures/typecheck/valid/ok_comparisons_and_args.sr
 sigmadsl validate tests/fixtures/typecheck/invalid/non_bool_condition.sr
 ```
+
+---
+
+## Sprint 0.2-B — Profile compliance + forbidden constructs
+
+### Sprint goal
+
+Enforce “Python-shaped but not Python” guardrails and introduce profile scaffolding:
+
+- forbid assignments, loops, function definitions, and non-whitelisted function calls,
+- enforce `signal` profile only (future `intent`/`risk` recognized conceptually but not enabled),
+- add `sigmadsl lint` with stable rule codes.
+
+### What was implemented
+
+- `sigmadsl lint` CLI:
+  - lints a file or directory of `*.sr` files (deterministic ordering and output).
+- Forbidden construct validation (lint):
+  - assignment detection (`SD400`) via expression AST + statement-like assignment scanning,
+  - loop detection (`SD401`) for `for`/`while` statement starters,
+  - function definition detection (`SD402`) for `def` statement starters,
+  - import detection (`SD405`) for `import`/`from` statement starters,
+  - function-call whitelist enforcement (`SD403`) using the expression AST (`Call` nodes).
+- Profile compliance (lint):
+  - v0.2 treats all sources as `signal` and enforces a **signal-verb allowlist**.
+  - non-signal verbs produce `SD410`.
+- Tests:
+  - fixtures under `tests/fixtures/lint/`,
+  - CLI golden tests for stable rule codes and deterministic output.
+
+### Commands to run
+
+```bash
+pytest
+sigmadsl lint examples/equity_min_rules/
+sigmadsl lint tests/fixtures/lint/invalid/assignment_in_condition.sr
+```

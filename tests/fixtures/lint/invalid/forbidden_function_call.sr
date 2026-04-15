@@ -1,0 +1,4 @@
+rule "EQ: Forbidden Function Call" in underlying:
+    when now() > 0:
+        then emit_signal(kind="X", reason="bad_fn")
+

@@ -1,0 +1,4 @@
+tests/fixtures/lint/invalid/loop_stmt.sr:2:5 SD201 error: Branch must contain at least one 'then' line
+tests/fixtures/lint/invalid/loop_stmt.sr:3:9 SD401 error: Loops are not allowed in SigmaDSL
+tests/fixtures/lint/invalid/loop_stmt.sr:4:1 SD200 error: Expected 'then' line inside branch
+tests/fixtures/lint/invalid/loop_stmt.sr:6:1 SD200 error: Expected 'rule' at top level

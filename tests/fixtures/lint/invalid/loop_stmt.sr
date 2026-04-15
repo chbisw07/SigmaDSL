@@ -1,0 +1,5 @@
+rule "EQ: Loop Statement" in underlying:
+    when true:
+        for i in range(3):
+            then emit_signal(kind="X", reason="bad_loop")
+

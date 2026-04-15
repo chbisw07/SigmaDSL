@@ -3,19 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
+from .paths import discover_sr_files
 from .parser import parse_source
 from .typechecker import typecheck_source_file
 
 
-def _discover_sr_files(path: Path) -> list[Path]:
-    if path.is_file():
-        return [path]
-    files = sorted(p for p in path.rglob("*.sr") if p.is_file())
-    return files
-
-
 def validate_paths(path: Path) -> list[Diagnostic]:
-    files = _discover_sr_files(path)
+    files = discover_sr_files(path)
     if not files:
         return [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
 

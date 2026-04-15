@@ -1,0 +1,4 @@
+rule "EQ: Assign In Condition" in underlying:
+    when x = 1:
+        then emit_signal(kind="X", reason="bad_assignment")
+
