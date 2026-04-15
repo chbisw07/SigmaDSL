@@ -2,7 +2,16 @@
 
 SigmaDSL is a **Python-shaped** (indentation-based), **deterministic** rule DSL. It is **not Python** and is designed to be safely validated and executed without Python escape hatches.
 
-This repository currently implements **Phase A** through **Sprint 0.2-A** (authoring bootstrap + type checker v1).
+This repository currently implements **Phase A** through **Sprint 0.2-B** (authoring bootstrap + typed authoring + lint guardrails).
+
+## DSL version docs
+
+- `docs/DSL_v0.md` (base spec)
+- `docs/high_level_dsl_v0.1.md` (v0.1 snapshot: parse/diagnose + samples/docs)
+- `docs/high_level_dsl_v0.2.md` (v0.2 snapshot: type checker v1 + lint guardrails)
+
+True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
+spec-level copy-forward updates beyond `docs/DSL_v0.md`. None exist yet.
 
 ## Install (dev)
 
