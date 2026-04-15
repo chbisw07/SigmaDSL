@@ -5,6 +5,7 @@ from pathlib import Path
 
 from . import ast
 from .diagnostics import Diagnostic, Severity, diag
+from .expr import parse_expression_tokens
 from .lexer import Token, TokenKind, lex
 
 
@@ -89,6 +90,7 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
         start = cur.peek()
         depth = 0
         parts: list[str] = []
+        expr_tokens: list[Token] = []
 
         def tok_text(tok: Token) -> str:
             if tok.kind == TokenKind.IDENT:
@@ -141,13 +143,16 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
                     add("SD200", "Unmatched ')'", t)
                     depth = 0
             parts.append(tok_text(t))
+            expr_tokens.append(t)
             cur.advance()
 
         if depth != 0:
             add("SD200", "Unbalanced parentheses in expression", start)
 
         text = " ".join(p for p in parts if p)
-        return ast.Expr(text=text, span=ast.SourceSpan(line=start.line, column=start.column))
+        node, expr_diags = parse_expression_tokens(expr_tokens, file=file)
+        diags.extend(expr_diags)
+        return ast.Expr(text=text, node=node, span=ast.SourceSpan(line=start.line, column=start.column))
 
     def parse_verb_call() -> ast.VerbCall | None:
         name_tok = cur.peek()
@@ -302,4 +307,3 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
         consume_newlines()
 
     return ast.SourceFile(rules=tuple(rules), path=file), sorted(diags)
-

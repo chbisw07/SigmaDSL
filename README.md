@@ -2,7 +2,7 @@
 
 SigmaDSL is a **Python-shaped** (indentation-based), **deterministic** rule DSL. It is **not Python** and is designed to be safely validated and executed without Python escape hatches.
 
-This repository currently implements **Sprint 0.1-A: Parse and diagnose** (authoring bootstrap).
+This repository currently implements **Phase A** through **Sprint 0.2-A** (authoring bootstrap + type checker v1).
 
 ## Install (dev)
 
@@ -41,4 +41,6 @@ rule "EQ: Basic" in underlying:
 
 Supported structural keywords: `rule`, `in`, `when`, `elif`, `else`, `then`.
 
-Not implemented yet (intentionally): type checking, evaluation/runtime, replay/diff, indicators, imports/packaging, options/chain, planning/risk.
+Type checking is implemented in **Sprint 0.2-A** for a minimal set of types/operators/verb arguments.
+
+Not implemented yet (intentionally): evaluation/runtime, replay/diff, indicators, imports/packaging, options/chain, planning/risk.

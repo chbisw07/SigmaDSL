@@ -1,0 +1,3 @@
+rule "EQ: Unknown Identifier" in underlying:
+    when foo > 1:
+        then emit_signal(kind="X", reason="unknown_name")

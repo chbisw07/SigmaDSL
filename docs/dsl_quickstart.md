@@ -1,6 +1,10 @@
 # SigmaDSL Quickstart (v0.1-A)
 
-This quickstart covers **Sprint 0.1-A** only: **parsing + deterministic diagnostics** via `sigmadsl validate`.
+This quickstart covers **Phase A early sprints**:
+
+- **Sprint 0.1-A**: parsing + deterministic diagnostics
+- **Sprint 0.1-B**: sample pack + docs
+- **Sprint 0.2-A**: type checker v1 (comparisons/boolean ops/verb argument types)
 
 ## Install (dev)
 
@@ -55,9 +59,29 @@ OK
   - one or more `then <verb_call(...)>` lines under each branch
 - deterministic diagnostics with: file, line, column, code, severity, message
 
+## Type checking (v0.2-A)
+
+`sigmadsl validate` also runs a conservative v1 type checker:
+
+- conditions must type as `Bool`
+- boolean operators (`and`/`or`/`not`) require boolean operands
+- comparisons require compatible types (e.g., `Price` vs `Price`, `Percent` vs `Percent`)
+- verb calls (`then ...`) have typed argument checks for a minimal verb set
+
+Example type error:
+
+```sr
+rule "EQ: Bad" in underlying:
+    when bar.close:
+        then emit_signal(kind="X", reason="should_fail")
+```
+
+```text
+... SD300 error: Type mismatch in condition: expected Bool, got Price
+```
+
 ## Limitations (intentional, for later sprints)
 
-- expressions are parsed only shallowly for syntax shape (no typing or semantics)
-- verbs are parsed as calls (no whitelist enforcement yet)
-- no runtime/evaluation
+- no evaluator/runtime semantics (type checking only; no execution)
+- expression/function and verb signature sets are intentionally minimal and will expand later
 - no imports/packaging, replay, indicators, planning, risk, options/chain

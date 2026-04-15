@@ -12,14 +12,8 @@ class SourceSpan:
 
 @dataclass(frozen=True)
 class Expr:
-    """
-    Sprint 0.1-A: expressions are parsed only to a shallow token list / text.
-
-    Later sprints can replace this with a real expression AST without changing
-    the surrounding rule/branch structure.
-    """
-
     text: str
+    node: "ExprNode | None"
     span: SourceSpan
 
 
@@ -62,4 +56,3 @@ class Rule:
 class SourceFile:
     rules: tuple[Rule, ...]
     path: Path | None = None
-

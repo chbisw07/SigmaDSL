@@ -1,0 +1,1 @@
+tests/fixtures/typecheck/invalid/bad_verb_arg_type.sr:3:31 SD313 error: Type mismatch for emit_signal.kind: expected String, got DecimalLiteral

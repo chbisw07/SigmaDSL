@@ -1,0 +1,1 @@
+tests/fixtures/typecheck/invalid/unknown_verb.sr:3:14 SD310 error: Unknown verb: 'do_magic'

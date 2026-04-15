@@ -151,3 +151,63 @@ Validate the sample pack:
 ```bash
 sigmadsl validate examples/equity_min_rules/
 ```
+
+---
+
+## Sprint 0.2-A — Type checker v1
+
+### Sprint goal
+
+Add typed authoring foundations while keeping the v0.1 parser/CLI stable:
+
+- minimal type model (primitives + Price/Quantity/Percent/Timestamp/Duration),
+- type checking for comparisons, boolean expressions, and verb argument types,
+- improved diagnostics (expected vs got + useful spans),
+- good/bad type fixtures and CLI goldens.
+
+### What was implemented
+
+- **Expression AST (v0.2)**:
+  - expressions are parsed into a minimal AST (`src/sigmadsl/expr.py`) for typing and better error locations.
+  - parser still controls structure (`rule`/`when`/`then`) and remains indentation-aware; only expression parsing was extended.
+- **Type model v1** (`src/sigmadsl/types.py`):
+  - `Bool`, `String`, `Int`, `Decimal`, `Timestamp`, `Duration`,
+  - domain: `Price`, `Quantity`, `Percent`,
+  - internal literal types to support numeric literals without unit coercions.
+- **Built-in typing environment** (`src/sigmadsl/builtins.py`):
+  - minimal `underlying` context field types per DSL spec (e.g., `bar.close: Price`, `data.is_fresh: Bool`),
+  - a tiny whitelist of expression functions used in examples (`abs`, `highest`, `lowest`, `prior_high`, `prior_low`),
+  - minimal verb signatures for `emit_signal(...)` and `annotate(...)`.
+- **Type checker** (`src/sigmadsl/typechecker.py`):
+  - conditions must type as `Bool`,
+  - boolean ops require boolean operands,
+  - comparisons require compatible types (with literal unification for numeric constants),
+  - verb arguments are validated against signatures.
+- **CLI integration**:
+  - `sigmadsl validate` now performs parse + (if parse is clean) type checking.
+  - parse diagnostics remain unchanged and continue to short-circuit type checking to avoid cascades.
+- **Tests/fixtures**:
+  - good/bad typecheck fixtures under `tests/fixtures/typecheck/`,
+  - CLI golden tests for representative type errors.
+
+### Key design decisions
+
+- Introduced **literal type unification** (e.g., `bar.close > 100`) so numeric constants can type as `Price`/`Decimal`
+  without converting between unit types (keeps “Price is not Decimal” intact).
+- Kept the typed environment intentionally small and equity/`underlying`-only for v0.2-A.
+
+### Diagnostic codes added (type checking)
+
+- `SD300`: type mismatch / incompatible comparison
+- `SD301`: unknown identifier/field/function
+- `SD302`: operator not supported for operand types
+- `SD303`: unsupported context for v0.2 type checking
+- `SD310`–`SD313`: verb signature and argument typing errors
+
+### Commands to run
+
+```bash
+pytest
+sigmadsl validate tests/fixtures/typecheck/valid/ok_comparisons_and_args.sr
+sigmadsl validate tests/fixtures/typecheck/invalid/non_bool_condition.sr
+```

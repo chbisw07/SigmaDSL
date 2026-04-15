@@ -1,0 +1,1 @@
+tests/fixtures/typecheck/invalid/non_bool_condition.sr:2:10 SD300 error: Type mismatch in condition: expected Bool, got Price

@@ -1,0 +1,4 @@
+rule "EQ: Non Bool Condition" in underlying:
+    when bar.close:
+        then emit_signal(kind="X", reason="should_fail")
+

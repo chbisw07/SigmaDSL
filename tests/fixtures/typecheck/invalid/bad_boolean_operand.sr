@@ -1,0 +1,3 @@
+rule "EQ: Bad Bool Operand" in underlying:
+    when data.is_fresh and bar.close:
+        then emit_signal(kind="X", reason="bad_and")

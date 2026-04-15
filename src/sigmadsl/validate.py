@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
 from .parser import parse_source
+from .typechecker import typecheck_source_file
 
 
 def _discover_sr_files(path: Path) -> list[Path]:
@@ -21,6 +22,8 @@ def validate_paths(path: Path) -> list[Diagnostic]:
     all_diags: list[Diagnostic] = []
     for file in files:
         text = file.read_text(encoding="utf-8")
-        _, diags = parse_source(text, file=file)
-        all_diags.extend(diags)
+        source_file, parse_diags = parse_source(text, file=file)
+        all_diags.extend(parse_diags)
+        if source_file is not None and not parse_diags:
+            all_diags.extend(typecheck_source_file(source_file))
     return sorted(all_diags)

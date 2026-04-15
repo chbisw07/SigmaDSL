@@ -1,0 +1,4 @@
+rule "EQ: Type OK" in underlying:
+    when data.is_fresh and bar.close > 100:
+        then emit_signal(kind="PASS", reason="fresh_and_close_gt_100", strength=0.7)
+

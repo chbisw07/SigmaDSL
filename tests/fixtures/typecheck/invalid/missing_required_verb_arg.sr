@@ -1,0 +1,3 @@
+rule "EQ: Missing Kind" in underlying:
+    when true:
+        then emit_signal(reason="missing_kind")

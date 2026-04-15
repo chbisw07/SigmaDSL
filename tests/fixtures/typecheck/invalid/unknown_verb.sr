@@ -1,0 +1,3 @@
+rule "EQ: Unknown Verb" in underlying:
+    when true:
+        then do_magic(note="nope")

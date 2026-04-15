@@ -1,0 +1,3 @@
+rule "EQ: Bad Comparison Types" in underlying:
+    when bar.close > "100":
+        then emit_signal(kind="X", reason="bad_compare")
