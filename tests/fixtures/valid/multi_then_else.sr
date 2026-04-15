@@ -1,0 +1,7 @@
+rule "EQ: Multi Then Else" in underlying:
+    when bar.close > 100 and data.is_fresh:
+        then emit_signal(kind="SCREEN_PASS", reason="gt_100")
+        then annotate(note="also_logged")
+    else:
+        then emit_signal(kind="SCREEN_FAIL", reason="otherwise")
+

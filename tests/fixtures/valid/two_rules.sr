@@ -1,0 +1,8 @@
+rule "EQ: R1" in underlying:
+    when bar.close > highest(close, 20):
+        then emit_signal(kind="BULLISH", strength=0.7, reason="close_above_20bar_high")
+
+rule "EQ: R2" in underlying:
+    when abs(underlying.return_5m) < 0.2%:
+        then emit_signal(kind="QUIET", reason="low_return")
+

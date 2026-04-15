@@ -1,0 +1,4 @@
+rule "EQ: Missing In" underlying:
+    when true:
+        then emit_signal(kind="BUY")
+

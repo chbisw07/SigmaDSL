@@ -1,0 +1,5 @@
+rule "EQ: Loop" in underlying:
+    when true:
+        for i in range(10):
+            then emit_signal(kind="BUY")
+

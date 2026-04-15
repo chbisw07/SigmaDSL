@@ -1,0 +1,5 @@
+rule "EQ: Indent Error" in underlying:
+    when true:
+        then emit_signal(kind="BUY")
+   else:
+        then emit_signal(kind="SELL")

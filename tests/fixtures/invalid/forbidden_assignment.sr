@@ -1,0 +1,4 @@
+rule "EQ: Assignment" in underlying:
+    when x = 1:
+        then emit_signal(kind="BUY")
+

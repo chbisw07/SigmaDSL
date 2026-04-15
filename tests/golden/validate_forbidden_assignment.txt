@@ -1,0 +1,1 @@
+tests/fixtures/invalid/forbidden_assignment.sr:2:12 SD204 error: Assignments are not allowed in SigmaDSL expressions (use '==')

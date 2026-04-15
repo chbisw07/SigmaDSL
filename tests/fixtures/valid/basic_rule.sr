@@ -1,0 +1,4 @@
+rule "EQ: Basic" in underlying:
+    when true:
+        then emit_signal(kind="BUY", reason="basic_true")
+

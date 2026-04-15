@@ -1,0 +1,1 @@
+tests/fixtures/invalid/missing_colon_rule.sr:1:39 SD200 error: Expected ':' after rule header
