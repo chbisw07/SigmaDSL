@@ -32,6 +32,20 @@ Expected output:
 OK
 ```
 
+## Try the sample pack (v0.1-B)
+
+Sprint v0.1-B ships a starter sample pack under `examples/`:
+
+```bash
+sigmadsl validate examples/equity_min_rules/
+```
+
+Expected output:
+
+```text
+OK
+```
+
 ## What `validate` checks in v0.1-A
 
 - indentation-sensitive blocks (`rule` → branch → `then` lines)
@@ -47,4 +61,3 @@ OK
 - verbs are parsed as calls (no whitelist enforcement yet)
 - no runtime/evaluation
 - no imports/packaging, replay, indicators, planning, risk, options/chain
-

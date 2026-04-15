@@ -1,0 +1,5 @@
+# Multiple verb-call arguments (key=value pairs)
+rule "EQ: Verb Args" in underlying:
+    when bar.close >= 123.45:
+        then emit_signal(kind="BULLISH", strength=0.7, reason="close_gte_123_45")
+

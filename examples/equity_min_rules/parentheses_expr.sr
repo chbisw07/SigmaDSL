@@ -1,0 +1,5 @@
+# Parentheses in expressions (v0.1 parses expression shape only)
+rule "EQ: Parentheses Expr" in underlying:
+    when (data.is_fresh and (bar.close > 100)):
+        then emit_signal(kind="OK", reason="paren_demo")
+

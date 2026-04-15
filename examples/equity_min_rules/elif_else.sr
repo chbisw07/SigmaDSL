@@ -1,0 +1,9 @@
+# Demonstrates when / elif / else structure
+rule "EQ: Elif Else" in underlying:
+    when bar.close > 200:
+        then emit_signal(kind="HOT", reason="close_gt_200")
+    elif bar.close > 100:
+        then emit_signal(kind="WARM", reason="close_gt_100")
+    else:
+        then emit_signal(kind="COLD", reason="otherwise")
+

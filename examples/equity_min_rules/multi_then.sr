@@ -1,0 +1,6 @@
+# Multiple 'then' lines within a single branch
+rule "EQ: Multi Then" in underlying:
+    when session.is_regular and data.is_fresh:
+        then emit_signal(kind="SCREEN_PASS", reason="regular_session")
+        then annotate(note="secondary_annotation")
+

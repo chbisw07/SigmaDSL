@@ -89,5 +89,65 @@ sigmadsl validate tests/fixtures/invalid/missing_colon_rule.sr
   - `SD200` syntax/structure parse errors (expected token/construct)
   - `SD201` missing required structure (e.g., missing `when`, missing `then`)
   - `SD203` unterminated string literal
-  - `SD204` forbidden construct (assignment-in-expr, forbidden statement starters)
+- `SD204` forbidden construct (assignment-in-expr, forbidden statement starters)
 
+---
+
+## Sprint 0.1-B — Ship samples + docs
+
+### Sprint goal
+
+Turn the v0.1 parser into something a user can quickly try and understand:
+
+- ship a starter sample pack of minimal equity rules,
+- provide stable expected `validate` outputs for those samples,
+- expand CLI snapshot/golden coverage to prevent regressions,
+- keep changes incremental on top of Sprint 0.1-A (no redesign).
+
+### What was added
+
+- `examples/equity_min_rules/` sample pack (~10 `.sr` files) demonstrating:
+  - single rule / multiple rules,
+  - `when` + `then`,
+  - multi-`then`,
+  - `elif` / `else`,
+  - comments/blank lines,
+  - representative expression shapes (dot-access, calls, percent literal).
+- Expected output artifact for validation success:
+  - `examples/equity_min_rules/expected/validate_ok.txt` (`OK`).
+- Expanded tests:
+  - validate the examples directory output matches the expected artifact,
+  - validate all example files parse cleanly,
+  - add a deterministic **directory-validation golden** covering multiple failing files.
+- Docs updates pointing users to `examples/`.
+
+### `sigmadsl fmt` decision
+
+Deferred in Sprint 0.1-B.
+
+Reason: a formatter/indent-normalizer that is safe and deterministic would need a well-defined
+pretty-printer and a policy for preserving comments/blank lines. With the current v0.1 AST
+(which intentionally doesn’t preserve formatting trivia), a “rewrite formatter” would be lossy
+and too risky for a low-scope sprint.
+
+### Commands to run
+
+Install (dev):
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+Validate the sample pack:
+
+```bash
+sigmadsl validate examples/equity_min_rules/
+```

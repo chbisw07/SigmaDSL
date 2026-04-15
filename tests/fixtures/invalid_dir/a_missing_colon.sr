@@ -1,0 +1,4 @@
+rule "EQ: Dir Missing Colon" in underlying
+    when true:
+        then emit_signal(kind="BUY")
+

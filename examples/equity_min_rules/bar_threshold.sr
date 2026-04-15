@@ -1,0 +1,5 @@
+# Demonstrates dot-access + numeric comparison + logical 'and'
+rule "EQ: Bar Threshold" in underlying:
+    when data.is_fresh and bar.close > 100:
+        then emit_signal(kind="SCREEN_PASS", reason="close_gt_100")
+

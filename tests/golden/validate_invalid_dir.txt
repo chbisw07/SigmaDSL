@@ -1,0 +1,2 @@
+tests/fixtures/invalid_dir/a_missing_colon.sr:1:43 SD200 error: Expected ':' after rule header
+tests/fixtures/invalid_dir/b_forbidden_assignment.sr:2:12 SD204 error: Assignments are not allowed in SigmaDSL expressions (use '==')

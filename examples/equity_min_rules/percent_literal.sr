@@ -1,0 +1,5 @@
+# Percent literal token (0.2%) is recognized by the lexer in v0.1
+rule "EQ: Percent Literal" in underlying:
+    when abs(underlying.return_5m) < 0.2%:
+        then emit_signal(kind="QUIET", reason="low_return")
+

@@ -1,0 +1,9 @@
+# Multiple rules in a single file
+rule "EQ: R1" in underlying:
+    when data.is_fresh and bar.close > highest(close, 20):
+        then emit_signal(kind="BULLISH", strength=0.7, reason="close_above_20bar_high")
+
+rule "EQ: R2" in underlying:
+    when data.is_fresh and bar.close < lowest(close, 20):
+        then emit_signal(kind="BEARISH", strength=0.7, reason="close_below_20bar_low")
+

@@ -21,6 +21,14 @@ sigmadsl validate path/to/dir/   # validates all *.sr under the directory
 
 Exit code is `0` for valid input and non-zero if any diagnostics are produced.
 
+## Examples (Sprint 0.1-B)
+
+Starter sample pack:
+
+```bash
+sigmadsl validate examples/equity_min_rules/
+```
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):

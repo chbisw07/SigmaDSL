@@ -1,0 +1,5 @@
+# Minimal rule: when true -> emit_signal(...)
+rule "EQ: Basic Signal" in underlying:
+    when true:
+        then emit_signal(kind="BUY", reason="basic_true")
+

@@ -1,0 +1,5 @@
+# Rule name as IDENT (strings are preferred, but IDENT is allowed by the v0.x grammar sketch)
+rule EQ_IdentifierName in underlying:
+    when true:
+        then emit_signal(kind="OK", reason="ident_name")
+

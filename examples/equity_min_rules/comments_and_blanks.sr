@@ -1,0 +1,7 @@
+# Comments and blank lines are ignored by the lexer.
+
+rule "EQ: Comments And Blanks" in underlying:
+    # Comment inside a rule
+    when true:  # Inline comment after branch header
+        then emit_signal(kind="OK", reason="comments_ok")  # Inline comment after then line
+
