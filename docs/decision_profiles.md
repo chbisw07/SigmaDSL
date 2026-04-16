@@ -67,6 +67,8 @@ Every decision record includes a stable envelope:
 - `trace_ref`: `{ event_index, rule_name, action_index }`
 - `enforcement`: `{ status, blocked_by }`
 
+Sprint v1.0-C adds `sigmadsl report`, which consumes the same JSONL decision stream and aggregates outcomes per rule/symbol/day.
+
 Kind-specific fields:
 - `signal`:
   - `signal_kind`, `reason`, `strength`

@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v1.0
 
-Status: Implemented (v1.0-A profiles + stable schema; v1.0-B risk phase).  
-Scope: **Sprint v1.0-A** (“Signal / Intent / Risk profiles”) + **Sprint v1.0-B** (“Risk constraints v1”).
+Status: Implemented (v1.0-A profiles + stable schema; v1.0-B risk phase; v1.0-C reports + UX polish).  
+Scope: **Sprint v1.0-A** (“Signal / Intent / Risk profiles”) + **Sprint v1.0-B** (“Risk constraints v1”) + **Sprint v1.0-C** (“Reports + UX polish”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -45,6 +45,7 @@ while adding the v1.0 envelope fields.
 - `sigmadsl validate <path> --profile {signal|intent|risk}`
 - `sigmadsl lint <path> --profile {signal|intent|risk}`
 - `sigmadsl run ... --profile {signal|intent|risk}`
+- `sigmadsl report --input decisions.jsonl`
 
 `sigmadsl replay` and `sigmadsl diff` remain deterministic; run logs record the selected profile.
 
@@ -57,6 +58,16 @@ v1.0-B introduces a separate deterministic risk phase:
 - blocked decisions are represented via `enforcement={status, blocked_by}`
 
 Runnable examples: `examples/risk_rules/`.
+
+## What v1.0 adds (v1.0-C)
+
+v1.0-C focuses on product usability on top of the stable decision stream:
+
+- `sigmadsl report` aggregates outcomes per rule / symbol / day from decision JSONL outputs
+- `sigmadsl explain` formatting is polished to surface enforcement details and “why did/didn’t it fire?”
+- user docs:
+  - `docs/equity_product_quickstart.md`
+  - `docs/faq.md`
 
 ## Known limitations / deferred items
 

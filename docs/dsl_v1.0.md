@@ -1495,6 +1495,12 @@ v0.6-B adds local packaging:
 - `pack path --out pack.zip --name NAME --version X.Y.Z` creates a deterministic bundle
 - `validate --pack pack.zip` verifies manifest + hashes + embedded source validity
 
+v1.0-C adds reporting:
+
+- `report --input decisions.jsonl` aggregates outcomes per rule / symbol / day from a decision JSONL stream
+  - report consumes the stable decision schema (`sigmadsl.decision` `1.0-b`) emitted by `run` / `replay`
+  - output is deterministic and golden-testable
+
 ## 21.2 Diagnostics requirements
 
 **Status: CURRENTLY DECIDED**  

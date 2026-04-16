@@ -5,6 +5,7 @@ Explain (decision)
 - verb: emit_signal
 - rule: EQ: Breakout
 - event: TCS #1 @ 2026-01-01T09:20:00
+- enforcement: allowed
 - trace_ref: {"action_index": 0, "event_index": 1, "rule_name": "EQ: Breakout"}
 
 Why it fired

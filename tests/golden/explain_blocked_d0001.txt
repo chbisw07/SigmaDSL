@@ -1,0 +1,84 @@
+Explain (decision)
+- id: D0001
+- kind: signal
+- profile: signal
+- verb: emit_signal
+- rule: EQ: Always signal
+- event: TCS #0 @ 2026-01-01T09:15:00
+- enforcement: blocked
+- blocked_by: D0002
+- trace_ref: {"action_index": 0, "event_index": 0, "rule_name": "EQ: Always signal"}
+
+Risk enforcement
+- status: blocked
+- blocked_by: D0002
+- D0002: RISK: Block close <= 100 block constraint_kind="block" reason="close_le_100"
+
+Why it fired
+- selected_branch: when
+- when: true => True
+- actions:
+  - emit_signal(kind="BUY", reason="always") -> D0001
+
+Decision
+{
+  "context": "underlying",
+  "enforcement": {
+    "blocked_by": [
+      "D0002"
+    ],
+    "status": "blocked"
+  },
+  "event_index": 0,
+  "id": "D0001",
+  "kind": "signal",
+  "profile": "signal",
+  "reason": "always",
+  "rule_name": "EQ: Always signal",
+  "schema": "sigmadsl.decision",
+  "schema_version": "1.0-b",
+  "signal_kind": "BUY",
+  "strength": null,
+  "symbol": "TCS",
+  "timestamp": "2026-01-01T09:15:00",
+  "trace_ref": {
+    "action_index": 0,
+    "event_index": 0,
+    "rule_name": "EQ: Always signal"
+  },
+  "verb": "emit_signal"
+}
+Trace
+{
+  "event": {
+    "index": 0,
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:15:00"
+  },
+  "rule": {
+    "actions": [
+      {
+        "args": {
+          "kind": "BUY",
+          "reason": "always"
+        },
+        "decision_id": "D0001",
+        "verb": "emit_signal"
+      }
+    ],
+    "context": "underlying",
+    "decisions_emitted": [
+      "D0001"
+    ],
+    "evaluated_branches": [
+      {
+        "branch_kind": "when",
+        "expr": "true",
+        "result": true
+      }
+    ],
+    "fired": true,
+    "rule_name": "EQ: Always signal",
+    "selected_branch": "when"
+  }
+}

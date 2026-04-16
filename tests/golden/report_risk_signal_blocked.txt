@@ -1,0 +1,10 @@
+SigmaDSL report
+- total: 4
+- allowed: 3
+- blocked: 1
+- by_kind: {"constraint": 1, "signal": 3}
+- by_profile: {"risk": 1, "signal": 3}
+
+By day / symbol / rule
+- 2026-01-01 TCS EQ: Always signal: total=3 allowed=2 blocked=1 by_kind={"signal": 3}
+- 2026-01-01 TCS RISK: Block close <= 100: total=1 allowed=1 blocked=0 by_kind={"constraint": 1}

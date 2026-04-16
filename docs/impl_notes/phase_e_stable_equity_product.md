@@ -118,3 +118,56 @@ sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --
 
 - no portfolio-wide or stateful risk enforcement (event-local only)
 - no plan generation or routing
+
+---
+
+## Sprint v1.0-C — Reports + UX polish
+
+### Sprint goal
+
+Improve usability on top of the stable equity CLI surface:
+
+- add `sigmadsl report` for practical aggregates (rule / symbol / day)
+- polish `sigmadsl explain` output for “why did / didn’t it fire?”
+- add equity-focused quickstart + FAQ
+
+### What was implemented
+
+- **Report command:**
+  - `sigmadsl report --input decisions.jsonl` aggregates:
+    - total decision counts
+    - allowed vs blocked counts (via `enforcement.status`)
+    - grouping by `(day, symbol, rule_name)` with kind breakdown
+  - deterministic ordering and golden-backed output
+- **Explain UX:**
+  - decision explains now surface `enforcement` in the header
+  - blocked decisions list the blocking constraint decision ids and a one-line constraint summary
+- **Docs:**
+  - `docs/equity_product_quickstart.md`
+  - `docs/faq.md`
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Manual report demo:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr > decisions.jsonl
+sigmadsl report --input decisions.jsonl
+```
+
+Manual explain demo (blocked decision):
+
+```bash
+sigmadsl explain --decision-id D0001 --input examples/risk_rules/data/bars_basic.csv --rules examples/risk_rules/packs/signal_always --risk-rules examples/risk_rules/packs/risk_block_close
+```
+
+### Known limitations (intentionally deferred)
+
+- reports are intentionally minimal (no PnL, no broker/execution metrics)
+- report consumes decision JSONL only (it does not ingest run logs directly)

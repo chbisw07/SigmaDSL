@@ -7,6 +7,7 @@ This repository currently implements:
 - **Phase A** through **Sprint 0.2-B** (authoring bootstrap + typed authoring + lint guardrails)
 - **Phase B** through **Sprint 0.4-B** (CSV runner + JSON decisions + replay + diff + explain, verified via fixtures/goldens)
 - **Phase C** through **Sprint 0.5-A** (indicator registry + deterministic windows + numeric goldens)
+- **Phase E** through **Sprint v1.0-C** (profiles + risk gating + report + UX/docs polish)
 
 ## DSL version docs
 
@@ -17,6 +18,7 @@ This repository currently implements:
 - `docs/high_level_dsl_v0.4.md` (v0.4 snapshot: event log + replay)
 - `docs/high_level_dsl_v0.5.md` (v0.5 snapshot: indicator registry + deterministic windows)
 - `docs/high_level_dsl_v0.6.md` (v0.6 snapshot: deterministic imports + module layout)
+- `docs/high_level_dsl_v1.0.md` (v1.0 snapshot: profiles + stable schema + risk gating)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
 spec-level copy-forward updates beyond `docs/DSL_v0.md`.
@@ -84,6 +86,15 @@ Explain a single decision:
 sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
 ```
 
+## Report (Sprint v1.0-C)
+
+Aggregate outcomes per rule / symbol / day from a decision JSONL stream:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr > decisions.jsonl
+sigmadsl report --input decisions.jsonl
+```
+
 ## Replay (Sprint 0.4-A)
 
 Write a replay log during `run`:
@@ -136,6 +147,11 @@ sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --
 ```
 
 See `docs/risk_constraints.md` and `examples/risk_rules/`.
+
+## Equity quickstart + FAQ
+
+- `docs/equity_product_quickstart.md`
+- `docs/faq.md`
 
 ## Supported syntax (Sprint 0.1-A)
 

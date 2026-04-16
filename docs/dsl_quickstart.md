@@ -278,3 +278,17 @@ sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --
 ```
 
 See `docs/risk_constraints.md` for the implemented semantics.
+
+## Reports (v1.0-C)
+
+Sprint v1.0-C adds a small reporting surface that aggregates outcomes per rule / symbol / day from a decision JSONL stream:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr > decisions.jsonl
+sigmadsl report --input decisions.jsonl
+```
+
+## Equity quickstart + FAQ
+
+- `docs/equity_product_quickstart.md`
+- `docs/faq.md`

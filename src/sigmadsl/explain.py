@@ -27,6 +27,9 @@ def explain_decision(result: EvalResult, decision_id: str) -> str | None:
     lines.append(f"- verb: {decision.verb}\n")
     lines.append(f"- rule: {decision.rule_name}\n")
     lines.append(f"- event: {decision.symbol} #{decision.event_index} @ {decision.timestamp}\n")
+    lines.append(f"- enforcement: {decision.enforcement.status}\n")
+    if decision.enforcement.blocked_by:
+        lines.append(f"- blocked_by: {', '.join(decision.enforcement.blocked_by)}\n")
     lines.append(f"- trace_ref: {json.dumps(decision.trace_ref, sort_keys=True)}\n")
     lines.append("\n")
 
@@ -34,6 +37,16 @@ def explain_decision(result: EvalResult, decision_id: str) -> str | None:
         lines.append("Trace: <not found>\n")
         lines.append(_json_block("Decision", decision.to_dict()))
         return "".join(lines)
+
+    if decision.enforcement.status == "blocked":
+        lines.append("Risk enforcement\n")
+        lines.append(f"- status: blocked\n")
+        if decision.enforcement.blocked_by:
+            lines.append(f"- blocked_by: {', '.join(decision.enforcement.blocked_by)}\n")
+            for cid in decision.enforcement.blocked_by:
+                c = next((d for d in result.decisions if d.id == cid), None)
+                lines.append(f"- {cid}: {_constraint_line(c)}\n")
+        lines.append("\n")
 
     # Summarize why it fired.
     lines.append("Why it fired\n")
@@ -95,20 +108,23 @@ def explain_rule_at_event(result: EvalResult, *, rule_name: str, event_index: in
         expr = bp.expr or "<missing>"
         lines.append(f"- {bp.branch_kind}: {expr} => {bp.result}\n")
 
-    if not rt.fired:
-        lines.append("\n")
+    lines.append("\n")
+    if rt.fired:
+        lines.append("Why it fired\n")
+        lines.append(f"- selected_branch: {rt.selected_branch}\n")
+        if rt.selected_branch == "else":
+            lines.append("- else: selected (no prior branch matched)\n")
+        if rt.actions:
+            lines.append("- actions:\n")
+            for a in rt.actions:
+                args = ", ".join(f"{k}={_value_str(v)}" for k, v in sorted(a.args.items(), key=lambda kv: kv[0]))
+                lines.append(f"  - {a.verb}({args}) -> {a.decision_id}\n")
+    else:
         lines.append("Why it did not fire\n")
         if rt.selected_branch is None:
             lines.append("- no branch matched\n")
         else:
             lines.append(f"- selected_branch={rt.selected_branch!r} but no actions emitted\n")
-
-    if rt.actions:
-        lines.append("\n")
-        lines.append("Actions\n")
-        for a in rt.actions:
-            args = ", ".join(f"{k}={_value_str(v)}" for k, v in sorted(a.args.items(), key=lambda kv: kv[0]))
-            lines.append(f"- {a.verb}({args}) -> {a.decision_id}\n")
 
     lines.append("\n")
     lines.append(_json_block("Trace", {"event": ev.to_dict()["event"], "rule": rt.to_dict()}))
@@ -146,3 +162,26 @@ def _value_str(v: object) -> str:
     except Exception:
         pass
     return str(v)
+
+
+def _constraint_line(d: object) -> str:
+    if d is None:
+        return "<constraint decision not found>"
+    try:
+        if getattr(d, "kind", None) != "constraint":
+            return "<not a constraint decision>"
+        rule_name = getattr(d, "rule_name", "<unknown>")
+        verb = getattr(d, "verb", "<unknown>")
+        ck = getattr(d, "constraint_kind", None)
+        reason = getattr(d, "reason", None)
+        qty = getattr(d, "quantity", None)
+        parts: list[str] = [str(rule_name), str(verb)]
+        if ck is not None:
+            parts.append(f"constraint_kind={json.dumps(str(ck))}")
+        if reason is not None:
+            parts.append(f"reason={json.dumps(str(reason))}")
+        if qty is not None:
+            parts.append(f"quantity={_value_str(qty)}")
+        return " ".join(parts)
+    except Exception:
+        return "<constraint decision not found>"

@@ -11,6 +11,7 @@ from .linting import lint_paths_with_profile
 from .profile import profile_paths
 from .packaging import create_pack, validate_pack
 from .explain import explain_decision, explain_rule_at_event
+from .reporting import aggregate_report_from_decision_dicts, load_decision_dicts_jsonl
 from .runner import (
     decision_jsonl_lines,
     replay_from_log,
@@ -286,6 +287,41 @@ def profile(
     inds = o["indicators"]
     typer.echo(f"- indicator_registry_version: {inds['registry_version']}")
     typer.echo(f"- indicators_referenced: {', '.join(inds['referenced']) or '<none>'}")
+
+
+@app.command()
+def report(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Decision JSONL output from run/replay"),
+    format: str = typer.Option("text", "--format", help="Output format: text or json"),
+):
+    """
+    Aggregate outcomes per rule / symbol / day (Sprint v1.0-C).
+    """
+
+    decisions, diags = load_decision_dicts_jsonl(input)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=2)
+
+    summary, diags = aggregate_report_from_decision_dicts(decisions, source=input)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=2)
+    assert summary is not None
+
+    fmt = format.strip().lower()
+    if fmt not in ("text", "json"):
+        typer.echo("Invalid --format (expected 'text' or 'json')", err=True)
+        raise typer.Exit(code=2)
+
+    if fmt == "json":
+        import json
+
+        typer.echo(json.dumps(summary.to_dict(), sort_keys=True, indent=2))
+    else:
+        typer.echo(summary.to_text().rstrip("\n"))
 
 
 @app.command()

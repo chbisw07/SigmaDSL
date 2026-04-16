@@ -1,0 +1,10 @@
+SigmaDSL report
+- total: 5
+- allowed: 5
+- blocked: 0
+- by_kind: {"annotation": 1, "signal": 4}
+- by_profile: {"signal": 5}
+
+By day / symbol / rule
+- 2026-01-01 TCS EQ: Breakout: total=2 allowed=2 blocked=0 by_kind={"signal": 2}
+- 2026-01-01 TCS EQ: Close GT 100: total=3 allowed=3 blocked=0 by_kind={"annotation": 1, "signal": 2}
