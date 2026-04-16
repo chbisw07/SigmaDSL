@@ -13,6 +13,17 @@ _REQUIRED_COLUMNS = ("symbol", "timestamp", "open", "high", "low", "close", "vol
 _OPTIONAL_COLUMNS = ("underlying_return_5m", "data_is_fresh", "session_is_regular")
 
 
+@dataclass(frozen=True)
+class CsvLoadMeta:
+    columns: tuple[str, ...]
+    row_count: int
+
+
+def load_underlying_events_csv_with_meta(path: Path) -> tuple[list[UnderlyingEvent], CsvLoadMeta | None, list[Diagnostic]]:
+    events, meta, diags = _load_underlying_events_csv_impl(path)
+    return events, meta, diags
+
+
 def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[Diagnostic]]:
     """
     Sprint 0.3-B: strict CSV loader for a minimal equity/bar input model.
@@ -25,14 +36,19 @@ def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[
     Diagnostics are deterministic: sorted by (file, line, column, code, message).
     """
 
+    events, _, diags = _load_underlying_events_csv_impl(path)
+    return events, diags
+
+
+def _load_underlying_events_csv_impl(path: Path) -> tuple[list[UnderlyingEvent], CsvLoadMeta | None, list[Diagnostic]]:
     text = path.read_text(encoding="utf-8")
     reader = csv.DictReader(text.splitlines())
     if reader.fieldnames is None:
-        return [], [diag(code="SD520", message="CSV is missing a header row", file=path)]
+        return [], None, [diag(code="SD520", message="CSV is missing a header row", file=path)]
 
     missing = [c for c in _REQUIRED_COLUMNS if c not in reader.fieldnames]
     if missing:
-        return [], [
+        return [], None, [
             diag(
                 code="SD520",
                 message=f"CSV is missing required column(s): {', '.join(missing)}",
@@ -43,21 +59,12 @@ def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[
 
     events: list[UnderlyingEvent] = []
     diags: list[Diagnostic] = []
-
     first_symbol: str | None = None
 
     for row_i, row in enumerate(reader, start=2):  # header is line 1
         symbol = (row.get("symbol") or "").strip()
         if not symbol:
-            diags.append(
-                diag(
-                    code="SD521",
-                    message="CSV row has empty 'symbol'",
-                    file=path,
-                    line=row_i,
-                    column=1,
-                )
-            )
+            diags.append(diag(code="SD521", message="CSV row has empty 'symbol'", file=path, line=row_i, column=1))
             continue
 
         if first_symbol is None:
@@ -79,15 +86,7 @@ def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[
 
         timestamp = (row.get("timestamp") or "").strip()
         if not timestamp:
-            diags.append(
-                diag(
-                    code="SD521",
-                    message="CSV row has empty 'timestamp'",
-                    file=path,
-                    line=row_i,
-                    column=1,
-                )
-            )
+            diags.append(diag(code="SD521", message="CSV row has empty 'timestamp'", file=path, line=row_i, column=1))
             continue
 
         try:
@@ -100,44 +99,20 @@ def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[
                 volume=_dec_field(row, "volume"),
             )
         except _FieldError as e:
-            diags.append(
-                diag(
-                    code="SD521",
-                    message=e.message,
-                    file=path,
-                    line=row_i,
-                    column=1,
-                )
-            )
+            diags.append(diag(code="SD521", message=e.message, file=path, line=row_i, column=1))
             continue
 
         try:
             underlying_return_5m = _dec_optional(row, "underlying_return_5m")
         except _FieldError as e:
-            diags.append(
-                diag(
-                    code="SD521",
-                    message=e.message,
-                    file=path,
-                    line=row_i,
-                    column=1,
-                )
-            )
+            diags.append(diag(code="SD521", message=e.message, file=path, line=row_i, column=1))
             continue
 
         try:
             data_is_fresh = _bool_optional(row, "data_is_fresh", default=True)
             session_is_regular = _bool_optional(row, "session_is_regular", default=True)
         except _FieldError as e:
-            diags.append(
-                diag(
-                    code="SD521",
-                    message=e.message,
-                    file=path,
-                    line=row_i,
-                    column=1,
-                )
-            )
+            diags.append(diag(code="SD521", message=e.message, file=path, line=row_i, column=1))
             continue
 
         events.append(
@@ -154,7 +129,8 @@ def load_underlying_events_csv(path: Path) -> tuple[list[UnderlyingEvent], list[
     if not diags and not events:
         diags.append(diag(code="SD523", message="CSV has no data rows", file=path))
 
-    return events, sorted(diags)
+    meta = CsvLoadMeta(columns=tuple(reader.fieldnames), row_count=len(events))
+    return events, meta, sorted(diags)
 
 
 @dataclass(frozen=True)
@@ -200,4 +176,3 @@ def _bool_optional(row: dict[str, str | None], name: str, *, default: bool) -> b
     if s in ("false", "0", "no"):
         return False
     raise _FieldError(f"CSV field {name!r} is not a valid bool (true/false/1/0/yes/no): {raw!r}")
-

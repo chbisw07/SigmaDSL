@@ -8,19 +8,37 @@ from .evaluator import CompiledRule, EvalError, EvalResult, compile_source_file,
 from .linting import lint_text
 from .parser import parse_source
 from .paths import discover_sr_files
+from .runlog import (
+    RUNLOG_SCHEMA,
+    RUNLOG_SCHEMA_VERSION,
+    CsvSourceMeta,
+    RuleSource,
+    RunLog,
+    load_runlog,
+    sha256_text,
+    write_runlog,
+)
 from .typechecker import typecheck_source_file
 
 
 def load_compiled_rules(path: Path) -> tuple[list[CompiledRule], list[Diagnostic]]:
+    compiled, _, diags = load_compiled_rules_with_sources(path)
+    return compiled, diags
+
+
+def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], list[RuleSource], list[Diagnostic]]:
     files = discover_sr_files(path)
     if not files:
-        return [], [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
+        return [], [], [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
 
     rules: list[CompiledRule] = []
+    sources: list[RuleSource] = []
     diags: list[Diagnostic] = []
 
     for file in files:
         text = file.read_text(encoding="utf-8")
+        sources.append(RuleSource(path=str(file), sha256=sha256_text(text), text=text))
+
         sf, parse_diags = parse_source(text, file=file)
         diags.extend(parse_diags)
         if sf is None or parse_diags:
@@ -30,11 +48,10 @@ def load_compiled_rules(path: Path) -> tuple[list[CompiledRule], list[Diagnostic
         diags.extend(lint_text(text, file=file))
 
         # Only include rules from files with no diagnostics to keep execution safe.
-        # This also keeps emitted decision IDs stable (fail-fast behavior).
         if not [d for d in diags if d.location.file == file]:
             rules.extend(compile_source_file(sf))
 
-    return rules, sorted(diags)
+    return rules, sources, sorted(diags)
 
 
 def run_underlying_from_csv(
@@ -62,6 +79,114 @@ def run_underlying_from_csv(
                 severity=Severity.error,
                 message=f"Runtime evaluation error: {e}",
                 file=input_csv,
+            )
+        ]
+
+
+def run_underlying_from_csv_with_log(
+    *,
+    rules_path: Path,
+    input_csv: Path,
+    engine_version: str = "v0.4-a",
+    log_out: Path | None,
+) -> tuple[EvalResult | None, list[Diagnostic]]:
+    """
+    Like `run_underlying_from_csv`, but optionally writes a self-contained replay log (Sprint 0.4-A).
+    """
+
+    from .csv_input import load_underlying_events_csv_with_meta
+
+    compiled, sources, rule_diags = load_compiled_rules_with_sources(rules_path)
+    if rule_diags:
+        return None, rule_diags
+
+    events, meta, csv_diags = load_underlying_events_csv_with_meta(input_csv)
+    if csv_diags:
+        return None, csv_diags
+    assert meta is not None
+
+    try:
+        result = evaluate_underlying(compiled, events, engine_version=engine_version)
+    except EvalError as e:
+        return None, [
+            diag(
+                code="SD530",
+                severity=Severity.error,
+                message=f"Runtime evaluation error: {e}",
+                file=input_csv,
+            )
+        ]
+
+    if log_out is not None:
+        csv_text = input_csv.read_text(encoding="utf-8")
+        log = RunLog(
+            schema=RUNLOG_SCHEMA,
+            schema_version=RUNLOG_SCHEMA_VERSION,
+            engine_version=engine_version,
+            rules=tuple(sources),
+            input_csv=CsvSourceMeta(
+                path=str(input_csv),
+                sha256=sha256_text(csv_text),
+                columns=meta.columns,
+                row_count=meta.row_count,
+            ),
+            events=tuple(events),
+        )
+        log_diags = write_runlog(log_out, log)
+        if log_diags:
+            return None, log_diags
+
+    return result, []
+
+
+def replay_from_log(*, log_path: Path, engine_version_override: str | None = None) -> tuple[EvalResult | None, list[Diagnostic]]:
+    """
+    Sprint 0.4-A: Load a run log and re-evaluate deterministically from embedded snapshots.
+    """
+
+    log, diags = load_runlog(log_path)
+    if diags:
+        return None, diags
+    assert log is not None
+
+    compiled: list[CompiledRule] = []
+    all_diags: list[Diagnostic] = []
+
+    for rs in log.rules:
+        if sha256_text(rs.text) != rs.sha256:
+            all_diags.append(
+                diag(
+                    code="SD543",
+                    severity=Severity.error,
+                    message=f"Rule snapshot sha256 mismatch for {rs.path!r}",
+                    file=log_path,
+                )
+            )
+            continue
+
+        sf, parse_diags = parse_source(rs.text, file=Path(rs.path))
+        all_diags.extend(parse_diags)
+        if sf is None or parse_diags:
+            continue
+
+        all_diags.extend(typecheck_source_file(sf))
+        all_diags.extend(lint_text(rs.text, file=Path(rs.path)))
+        if not [d for d in all_diags if d.location.file == Path(rs.path)]:
+            compiled.extend(compile_source_file(sf))
+
+    if all_diags:
+        return None, sorted(all_diags)
+
+    engine_version = engine_version_override or log.engine_version
+    try:
+        return evaluate_underlying(compiled, list(log.events), engine_version=engine_version), []
+    except EvalError as e:
+        return None, [
+            diag(
+                code="SD530",
+                severity=Severity.error,
+                message=f"Runtime evaluation error during replay: {e}",
+                file=log_path,
             )
         ]
 
@@ -133,4 +258,3 @@ def explain_decision_text(result: EvalResult, decision_id: str) -> str | None:
         + "\n"
     )
     return "".join(lines)
-

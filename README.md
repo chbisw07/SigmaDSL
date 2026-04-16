@@ -13,12 +13,14 @@ This repository currently implements:
 - `docs/high_level_dsl_v0.1.md` (v0.1 snapshot: parse/diagnose + samples/docs)
 - `docs/high_level_dsl_v0.2.md` (v0.2 snapshot: type checker v1 + lint guardrails)
 - `docs/high_level_dsl_v0.3.md` (v0.3 snapshot: deterministic evaluator + trace)
+- `docs/high_level_dsl_v0.4.md` (v0.4 snapshot: event log + replay)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
 spec-level copy-forward updates beyond `docs/DSL_v0.md`.
 Current spec snapshot docs:
 
 - `docs/dsl_v0.3.md` (v0.3-A: deterministic evaluation + trace chapters concretized)
+- `docs/dsl_v0.4.md` (v0.4-A: run log + replay semantics concretized)
 
 ## Install (dev)
 
@@ -66,6 +68,20 @@ Explain a single decision:
 
 ```bash
 sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+## Replay (Sprint 0.4-A)
+
+Write a replay log during `run`:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr --log-out runlog.json
+```
+
+Replay it deterministically:
+
+```bash
+sigmadsl replay --log runlog.json
 ```
 
 ## Supported syntax (Sprint 0.1-A)

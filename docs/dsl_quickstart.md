@@ -150,3 +150,17 @@ CSV requirements (v0.3-B):
 - required columns: `symbol,timestamp,open,high,low,close,volume`
 - optional columns: `underlying_return_5m,data_is_fresh,session_is_regular`
 - single symbol only (multi-symbol series is deferred)
+
+## Replay logs (v0.4-A)
+
+Write a self-contained replay log:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr --log-out runlog.json
+```
+
+Replay it deterministically (output should match the original `run` output exactly):
+
+```bash
+sigmadsl replay --log runlog.json
+```

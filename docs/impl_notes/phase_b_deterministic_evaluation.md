@@ -166,3 +166,69 @@ sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv -
 - multi-symbol CSV evaluation (per-symbol histories + deterministic merge) is deferred
 - trace export to a separate file/log is deferred (replay logging is v0.4)
 - replay/diff, indicators, imports/packaging, options/chain, planning/risk remain out of scope
+
+---
+
+## Sprint 0.4-A — Event log + replay
+
+### Sprint goal
+
+Make v0.3 runs replayable and reproducible:
+
+- define a deterministic, versioned event log format capturing the minimal replayable snapshot
+- integrate run logging into `sigmadsl run --log-out ...`
+- implement `sigmadsl replay --log ...` that reproduces the same outputs deterministically
+- add replay equivalence tests proving run output == replay output
+
+### Event log design (v0.4-A)
+
+Log format: a single JSON file (self-contained snapshot).
+
+Key design choice: **embed canonical snapshots** instead of relying on external files at replay time:
+
+- embedded rule file texts + sha256 (for integrity)
+- embedded normalized input events (bars/fields)
+- CSV metadata (path, sha256, columns, row_count) for provenance only
+
+This makes replay robust even if the original `.sr` files or CSV change after the run.
+
+### What was implemented
+
+- **Run log schema + loader**: `src/sigmadsl/runlog.py`
+  - schema: `sigmadsl.runlog`
+  - schema_version: `0.4-a`
+- **Runner integration**: `src/sigmadsl/runner.py`
+  - `run_underlying_from_csv_with_log(..., log_out=...)` writes a replayable log on success
+  - `replay_from_log(log_path=...)` recompiles rules from embedded snapshots and re-evaluates
+- **CLI command**: `src/sigmadsl/cli.py`
+  - `sigmadsl run ... --log-out runlog.json`
+  - `sigmadsl replay --log runlog.json`
+- **Tests**: `tests/test_cli_replay.py`
+  - run + log-out, then replay, assert outputs match exactly
+  - reject unsupported log schema deterministically
+
+### Commands to run
+
+Run + log:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr --log-out runlog.json
+```
+
+Replay:
+
+```bash
+sigmadsl replay --log runlog.json
+```
+
+Test suite:
+
+```bash
+pytest
+```
+
+### Known limitations (intentionally deferred)
+
+- diff/analyzer UX (`sigmadsl diff`) is deferred to a later sprint (v0.4-B)
+- replay currently re-emits decisions only (trace is re-computed but not persisted separately yet)
+- multi-symbol replay is still deferred (matches v0.3 runner scope)

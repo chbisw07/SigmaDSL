@@ -6,7 +6,12 @@ import typer
 
 from .diagnostics import Diagnostic
 from .linting import lint_paths
-from .runner import decision_jsonl_lines, explain_decision_text, run_underlying_from_csv
+from .runner import (
+    decision_jsonl_lines,
+    explain_decision_text,
+    replay_from_log,
+    run_underlying_from_csv_with_log,
+)
 from .validate import validate_paths
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -67,12 +72,13 @@ def run(
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
     format: str = typer.Option("jsonl", "--format", help="Output format: jsonl or json"),
+    log_out: Path | None = typer.Option(None, "--log-out", help="Write a replayable run log (Sprint 0.4-A)"),
 ):
     """
-    Run SigmaDSL rules deterministically on a bars CSV (Sprint 0.3-B).
+    Run SigmaDSL rules deterministically on a bars CSV (Sprint 0.3-B; logs added in 0.4-A).
     """
 
-    result, diags = run_underlying_from_csv(rules_path=rules, input_csv=input)
+    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, log_out=log_out)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -105,7 +111,7 @@ def explain(
     Explain a single decision by re-running evaluation and printing the emitting rule trace (Sprint 0.3-B).
     """
 
-    result, diags = run_underlying_from_csv(rules_path=rules, input_csv=input)
+    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, log_out=None)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -117,3 +123,34 @@ def explain(
         typer.echo(f"Decision not found: {decision_id}", err=True)
         raise typer.Exit(code=1)
     typer.echo(text.rstrip("\n"))
+
+
+@app.command()
+def replay(
+    log: Path = typer.Option(..., "--log", exists=True, readable=True, help="Path to a run log JSON file"),
+    format: str = typer.Option("jsonl", "--format", help="Output format: jsonl or json"),
+):
+    """
+    Replay a recorded run log deterministically (Sprint 0.4-A).
+    """
+
+    result, diags = replay_from_log(log_path=log)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=1)
+    assert result is not None
+
+    fmt = format.strip().lower()
+    if fmt not in ("jsonl", "json"):
+        typer.echo("Invalid --format (expected 'jsonl' or 'json')", err=True)
+        raise typer.Exit(code=2)
+
+    if fmt == "jsonl":
+        for line in decision_jsonl_lines(result):
+            typer.echo(line.rstrip("\n"))
+    else:
+        import json
+
+        decisions = [json.loads(l) for l in decision_jsonl_lines(result)]
+        typer.echo(json.dumps(decisions, sort_keys=True, indent=2))
