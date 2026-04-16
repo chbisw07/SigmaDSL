@@ -83,5 +83,19 @@ def verb_signatures() -> dict[str, VerbSignature]:
 
 
 def function_names() -> set[str]:
-    return {"abs", "highest", "lowest", "prior_high", "prior_low"}
-
+    # Expression-call whitelist (pure/deterministic).
+    #
+    # v0.2: simple helpers for authoring + typing.
+    # v0.5: adds indicator calls (EMA/RSI/ATR/VWAP) via deterministic registry.
+    return {
+        "abs",
+        "highest",
+        "lowest",
+        "prior_high",
+        "prior_low",
+        # indicators (v0.5-A)
+        "ema",
+        "rsi",
+        "atr",
+        "vwap",
+    }

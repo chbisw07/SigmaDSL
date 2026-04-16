@@ -1,4 +1,4 @@
-# SigmaDSL Quickstart (v0.3-A)
+# SigmaDSL Quickstart (v0.5-A)
 
 This quickstart covers early **Phase A + Phase B** sprints:
 
@@ -6,7 +6,11 @@ This quickstart covers early **Phase A + Phase B** sprints:
 - **Sprint 0.1-B**: sample pack + docs
 - **Sprint 0.2-A**: type checker v1 (comparisons/boolean ops/verb argument types)
 - **Sprint 0.2-B**: lint guardrails (forbidden constructs + signal-profile compliance)
-- **Sprint 0.3-A**: deterministic evaluator + trace (fixture-driven; no public runner CLI yet)
+- **Sprint 0.3-A**: deterministic evaluator + trace
+- **Sprint 0.3-B**: `sigmadsl run` + JSON/JSONL decisions + basic explain
+- **Sprint 0.4-A**: replayable run logs + `sigmadsl replay`
+- **Sprint 0.4-B**: improved explain + `sigmadsl diff` + golden suite hardening
+- **Sprint 0.5-A**: indicator registry + deterministic windows (EMA/RSI/ATR/VWAP)
 
 ## Install (dev)
 
@@ -106,9 +110,9 @@ See `docs/language_guardrails.md` for a concise explanation of:
 
 ## Limitations (intentional, for later sprints)
 
-- no public `sigmadsl run` command yet (CSV runner is Sprint 0.3-B)
+- multi-symbol evaluation is deferred (runner is single-symbol only)
 - expression/function and verb signature sets are intentionally minimal and will expand later
-- no imports/packaging, replay, indicators, planning, risk, options/chain
+- no imports/packaging, options/chain, planning/risk
 
 ## Deterministic evaluation + trace (v0.3-A)
 
@@ -178,3 +182,20 @@ sigmadsl diff run_a.json run_b.json
 ```
 
 See `docs/debugging_determinism.md` for a concise debugging workflow.
+
+## Indicators (v0.5-A)
+
+v0.5-A introduces a small deterministic indicator surface (see `docs/indicator_registry.md`):
+
+- `ema(series, length)`
+- `rsi(series, length)` (returns a `Percent` ratio in `[0, 1]`)
+- `atr(length)`
+- `vwap()` / `vwap(length)`
+
+Example:
+
+```sr
+rule "EQ: Trend Up" in underlying:
+    when bar.close > ema(close, 20) and rsi(close, 14) > 60%:
+        then emit_signal(kind="TREND_UP", reason="ema20_and_rsi14")
+```

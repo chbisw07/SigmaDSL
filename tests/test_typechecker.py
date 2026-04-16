@@ -25,6 +25,7 @@ def test_typecheck_invalid_fixtures_produce_expected_codes():
         "missing_required_verb_arg.sr": {"SD311"},
         "unknown_verb.sr": {"SD310"},
         "unknown_identifier.sr": {"SD301"},
+        "bad_indicator_length_type.sr": {"SD300"},
     }
 
     for filename, expected_codes in cases.items():
@@ -34,4 +35,3 @@ def test_typecheck_invalid_fixtures_produce_expected_codes():
         diags = typecheck_source_file(sf)
         codes = {d.code for d in diags}
         assert expected_codes.issubset(codes), f"{path} expected {expected_codes} in {codes}"
-

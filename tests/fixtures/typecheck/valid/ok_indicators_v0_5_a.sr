@@ -1,0 +1,4 @@
+rule "Indicators v0.5-A" in underlying:
+    when bar.close > ema(close, 3) and rsi(close, 3) > 70% and atr(3) < 5 and vwap() >= 0:
+        then annotate(note="ok")
+

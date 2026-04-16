@@ -10,7 +10,22 @@ from .runtime_models import Bar, UnderlyingEvent, dec, dec_str
 
 
 RUNLOG_SCHEMA = "sigmadsl.runlog"
-RUNLOG_SCHEMA_VERSION = "0.4-a"
+RUNLOG_SCHEMA_VERSION = "0.5-a"
+SUPPORTED_RUNLOG_SCHEMA_VERSIONS = ("0.4-a", "0.5-a")
+
+
+@dataclass(frozen=True)
+class IndicatorsMeta:
+    registry_version: str
+    pinned: tuple[str, ...]
+    referenced: tuple[str, ...]
+
+    def to_dict(self) -> dict:
+        return {
+            "registry_version": self.registry_version,
+            "pinned": list(self.pinned),
+            "referenced": list(self.referenced),
+        }
 
 
 def sha256_text(text: str) -> str:
@@ -113,9 +128,10 @@ class RunLog:
     rules: tuple[RuleSource, ...]
     input_csv: CsvSourceMeta
     events: tuple[UnderlyingEvent, ...]
+    indicators: IndicatorsMeta | None = None
 
     def to_dict(self) -> dict:
-        return {
+        out: dict = {
             "schema": self.schema,
             "schema_version": self.schema_version,
             "engine_version": self.engine_version,
@@ -125,6 +141,9 @@ class RunLog:
                 "events": [underlying_event_to_dict(e) for e in self.events],
             },
         }
+        if self.indicators is not None:
+            out["indicators"] = self.indicators.to_dict()
+        return out
 
     def to_json(self) -> str:
         return json.dumps(self.to_dict(), sort_keys=True, indent=2) + "\n"
@@ -154,12 +173,16 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
             )
         ]
 
-    if d.get("schema_version") != RUNLOG_SCHEMA_VERSION:
+    schema_version = d.get("schema_version")
+    if schema_version not in SUPPORTED_RUNLOG_SCHEMA_VERSIONS:
         return None, [
             diag(
                 code="SD541",
                 severity=Severity.error,
-                message=f"Unsupported run log schema_version (expected {RUNLOG_SCHEMA_VERSION!r})",
+                message=(
+                    "Unsupported run log schema_version "
+                    f"(expected one of {list(SUPPORTED_RUNLOG_SCHEMA_VERSIONS)!r})"
+                ),
                 file=path,
             )
         ]
@@ -171,6 +194,25 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
         events_d = d["input"]["events"]
     except Exception as e:
         return None, [diag(code="SD542", severity=Severity.error, message=f"Missing required log fields: {e}", file=path)]
+
+    indicators_meta: IndicatorsMeta | None = None
+    if schema_version == "0.5-a":
+        try:
+            ind = d["indicators"]
+            indicators_meta = IndicatorsMeta(
+                registry_version=str(ind["registry_version"]),
+                pinned=tuple(str(x) for x in ind["pinned"]),
+                referenced=tuple(str(x) for x in ind["referenced"]),
+            )
+        except Exception as e:
+            return None, [
+                diag(
+                    code="SD542",
+                    severity=Severity.error,
+                    message=f"Malformed indicators section in log: {e}",
+                    file=path,
+                )
+            ]
 
     rules: list[RuleSource] = []
     try:
@@ -204,11 +246,12 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
     return (
         RunLog(
             schema=RUNLOG_SCHEMA,
-            schema_version=RUNLOG_SCHEMA_VERSION,
+            schema_version=str(schema_version),
             engine_version=engine_version,
             rules=tuple(rules),
             input_csv=csv_meta,
             events=tuple(events),
+            indicators=indicators_meta,
         ),
         [],
     )
@@ -220,4 +263,3 @@ def write_runlog(path: Path, log: RunLog) -> list[Diagnostic]:
         return []
     except Exception as e:
         return [diag(code="SD540", severity=Severity.error, message=f"Failed to write log: {e}", file=path)]
-

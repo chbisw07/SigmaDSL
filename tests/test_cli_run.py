@@ -40,6 +40,22 @@ def test_cli_run_percent_jsonl_golden():
     assert result.output == golden
 
 
+def test_cli_run_indicators_jsonl_golden():
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--input",
+            "tests/fixtures/run/bars_basic.csv",
+            "--rules",
+            "tests/fixtures/eval/rules_indicators.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/run_indicators.jsonl").read_text(encoding="utf-8")
+    assert result.output == golden
+
+
 def test_cli_run_reports_csv_shape_errors_golden():
     result = runner.invoke(
         app,
@@ -73,4 +89,3 @@ def test_cli_run_format_json_is_stable():
     # JSON array output; keep this check conservative.
     assert result.output.startswith("[\n  {")
     assert '"id": "D0001"' in result.output
-

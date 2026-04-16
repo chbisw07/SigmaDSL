@@ -24,6 +24,16 @@ from .expr import (
 )
 from .runtime_models import UnderlyingEvent, dec
 from .trace import ActionTrace, BranchPredicateTrace, EventTrace, RuleTrace, RunTrace
+from .indicators import (
+    IndicatorCache,
+    IndicatorDef,
+    atr as ind_atr,
+    ema as ind_ema,
+    indicator_registry,
+    rsi as ind_rsi,
+    series_from_history,
+    vwap as ind_vwap,
+)
 
 
 class EvalError(RuntimeError):
@@ -71,6 +81,8 @@ def evaluate_underlying(
 
     decisions: list[Decision] = []
     event_traces: list[EventTrace] = []
+    indicator_cache = IndicatorCache()
+    indicators: dict[str, IndicatorDef] = indicator_registry()
 
     decision_counter = 0
 
@@ -108,7 +120,7 @@ def evaluate_underlying(
                     break
 
                 assert br.condition is not None
-                result = _eval_predicate(br.condition.node, ev, history)
+                result = _eval_predicate(br.condition.node, ev, history, indicator_cache, indicators)
                 evaluated_branches.append(
                     BranchPredicateTrace(branch_kind=br.kind, expr=br.condition.text, result=result)
                 )
@@ -121,7 +133,10 @@ def evaluate_underlying(
             if selected_branch is not None and selected_kind is not None:
                 for then_line in selected_branch.actions:
                     verb = then_line.call.name
-                    args_items = [(a.name, _eval_value(a.value.node, ev, history)) for a in then_line.call.args]
+                    args_items = [
+                        (a.name, _eval_value(a.value.node, ev, history, indicator_cache, indicators))
+                        for a in then_line.call.args
+                    ]
                     # Stable args order for trace readability.
                     args = {k: v for k, v in sorted(args_items, key=lambda kv: kv[0])}
                     did = next_id()
@@ -211,14 +226,26 @@ def _runtime_env(ev: UnderlyingEvent, history: list[UnderlyingEvent]) -> dict[st
     return env
 
 
-def _eval_predicate(node: ExprNode | None, ev: UnderlyingEvent, history: list[UnderlyingEvent]) -> bool:
-    val = _eval_value(node, ev, history)
+def _eval_predicate(
+    node: ExprNode | None,
+    ev: UnderlyingEvent,
+    history: list[UnderlyingEvent],
+    cache: IndicatorCache,
+    indicators: dict[str, IndicatorDef],
+) -> bool:
+    val = _eval_value(node, ev, history, cache, indicators)
     if not isinstance(val, bool):
         raise EvalError("Predicate did not evaluate to Bool")
     return val
 
 
-def _eval_value(node: ExprNode | None, ev: UnderlyingEvent, history: list[UnderlyingEvent]) -> object:
+def _eval_value(
+    node: ExprNode | None,
+    ev: UnderlyingEvent,
+    history: list[UnderlyingEvent],
+    cache: IndicatorCache,
+    indicators: dict[str, IndicatorDef],
+) -> object:
     if node is None:
         raise EvalError("Missing expression node")
 
@@ -250,7 +277,7 @@ def _eval_value(node: ExprNode | None, ev: UnderlyingEvent, history: list[Underl
         return env[dn]
 
     if isinstance(node, UnaryOp):
-        v = _eval_value(node.operand, ev, history)
+        v = _eval_value(node.operand, ev, history, cache, indicators)
         if node.op == "not":
             if not isinstance(v, bool):
                 raise EvalError("'not' requires Bool")
@@ -263,27 +290,27 @@ def _eval_value(node: ExprNode | None, ev: UnderlyingEvent, history: list[Underl
 
     if isinstance(node, BinaryOp):
         if node.op in ("and", "or"):
-            left = _eval_value(node.left, ev, history)
+            left = _eval_value(node.left, ev, history, cache, indicators)
             if not isinstance(left, bool):
                 raise EvalError(f"{node.op!r} left operand must be Bool")
             if node.op == "and":
                 if not left:
                     return False
-                right = _eval_value(node.right, ev, history)
+                right = _eval_value(node.right, ev, history, cache, indicators)
                 if not isinstance(right, bool):
                     raise EvalError(f"{node.op!r} right operand must be Bool")
                 return bool(right)
             else:
                 if left:
                     return True
-                right = _eval_value(node.right, ev, history)
+                right = _eval_value(node.right, ev, history, cache, indicators)
                 if not isinstance(right, bool):
                     raise EvalError(f"{node.op!r} right operand must be Bool")
                 return bool(right)
 
         # arithmetic
-        l = _eval_value(node.left, ev, history)
-        r = _eval_value(node.right, ev, history)
+        l = _eval_value(node.left, ev, history, cache, indicators)
+        r = _eval_value(node.right, ev, history, cache, indicators)
         ld = _as_decimal(l)
         rd = _as_decimal(r)
         if node.op == "+":
@@ -297,8 +324,8 @@ def _eval_value(node: ExprNode | None, ev: UnderlyingEvent, history: list[Underl
         raise EvalError(f"Unsupported binary op: {node.op!r}")
 
     if isinstance(node, CompareOp):
-        l = _eval_value(node.left, ev, history)
-        r = _eval_value(node.right, ev, history)
+        l = _eval_value(node.left, ev, history, cache, indicators)
+        r = _eval_value(node.right, ev, history, cache, indicators)
         if isinstance(l, bool) or isinstance(r, bool):
             raise EvalError("Comparison operands must be non-bool")
         ld = _as_decimal(l) if isinstance(l, Decimal) or isinstance(l, (int, str)) else l
@@ -310,12 +337,18 @@ def _eval_value(node: ExprNode | None, ev: UnderlyingEvent, history: list[Underl
         raise EvalError("Unsupported comparison operand types")
 
     if isinstance(node, Call):
-        return _eval_call(node, ev, history)
+        return _eval_call(node, ev, history, cache, indicators)
 
     raise EvalError(f"Unsupported expression node: {type(node).__name__}")
 
 
-def _eval_call(node: Call, ev: UnderlyingEvent, history: list[UnderlyingEvent]) -> object:
+def _eval_call(
+    node: Call,
+    ev: UnderlyingEvent,
+    history: list[UnderlyingEvent],
+    cache: IndicatorCache,
+    indicators: dict[str, IndicatorDef],
+) -> object:
     fn = dotted_name(node.func)
     if fn is None:
         raise EvalError("Call target must be a simple function name")
@@ -327,7 +360,7 @@ def _eval_call(node: Call, ev: UnderlyingEvent, history: list[UnderlyingEvent]) 
     if fn == "abs":
         if len(node.args) != 1:
             raise EvalError("abs() expects 1 argument")
-        return abs(_as_decimal(_eval_value(node.args[0], ev, history)))
+        return abs(_as_decimal(_eval_value(node.args[0], ev, history, cache, indicators)))
 
     if fn in ("highest", "lowest"):
         if len(node.args) != 2:
@@ -341,7 +374,7 @@ def _eval_call(node: Call, ev: UnderlyingEvent, history: list[UnderlyingEvent]) 
         if series_dn is None:
             raise EvalError(f"{fn}() first arg must be a series name")
         series = series_dn
-        length = int(_as_decimal(_eval_value(node.args[1], ev, history)))
+        length = int(_as_decimal(_eval_value(node.args[1], ev, history, cache, indicators)))
         if length <= 0:
             raise EvalError(f"{fn}() length must be positive")
         values = [_bar_series_value(e, series) for e in history[-length:]]
@@ -352,7 +385,7 @@ def _eval_call(node: Call, ev: UnderlyingEvent, history: list[UnderlyingEvent]) 
     if fn in ("prior_high", "prior_low"):
         if len(node.args) != 1:
             raise EvalError(f"{fn}() expects 1 argument")
-        length = int(_as_decimal(_eval_value(node.args[0], ev, history)))
+        length = int(_as_decimal(_eval_value(node.args[0], ev, history, cache, indicators)))
         if length <= 0:
             raise EvalError(f"{fn}() length must be positive")
         prev = history[:-1]
@@ -363,6 +396,71 @@ def _eval_call(node: Call, ev: UnderlyingEvent, history: list[UnderlyingEvent]) 
         highs = [e.bar.high for e in window]
         lows = [e.bar.low for e in window]
         return max(highs) if fn == "prior_high" else min(lows)
+
+    # Indicators (v0.5-A)
+    if fn in ("ema", "rsi"):
+        if len(node.args) != 2:
+            raise EvalError(f"{fn}() expects 2 arguments")
+        series_dn = None
+        if isinstance(node.args[0], Name):
+            series_dn = node.args[0].value
+        elif isinstance(node.args[0], Attribute):
+            series_dn = dotted_name(node.args[0])
+        if series_dn is None:
+            raise EvalError(f"{fn}() first arg must be a series name")
+        length = int(_as_decimal(_eval_value(node.args[1], ev, history, cache, indicators)))
+        if length <= 0:
+            raise EvalError(f"{fn}() length must be positive")
+
+        d = indicators.get(fn)
+        if d is None:
+            raise EvalError(f"Unknown indicator: {fn!r}")
+        ind_key = d.id.key()
+
+        def compute():
+            series = series_from_history(history, series_dn)
+            return ind_ema(series, length) if fn == "ema" else ind_rsi(series, length)
+
+        return cache.get_or_compute(indicator_key=ind_key, params=(series_dn, length), event_index=ev.index, compute=compute)
+
+    if fn == "atr":
+        if len(node.args) != 1:
+            raise EvalError("atr() expects 1 argument")
+        length = int(_as_decimal(_eval_value(node.args[0], ev, history, cache, indicators)))
+        if length <= 0:
+            raise EvalError("atr() length must be positive")
+        d = indicators.get(fn)
+        if d is None:
+            raise EvalError("Unknown indicator: 'atr'")
+        ind_key = d.id.key()
+
+        def compute():
+            high = series_from_history(history, "high")
+            low = series_from_history(history, "low")
+            close = series_from_history(history, "close")
+            return ind_atr(high, low, close, length)
+
+        return cache.get_or_compute(indicator_key=ind_key, params=(length,), event_index=ev.index, compute=compute)
+
+    if fn == "vwap":
+        if len(node.args) not in (0, 1):
+            raise EvalError("vwap() expects 0 or 1 arguments")
+        length = None
+        if len(node.args) == 1:
+            length = int(_as_decimal(_eval_value(node.args[0], ev, history, cache, indicators)))
+            if length <= 0:
+                raise EvalError("vwap() length must be positive")
+        d = indicators.get(fn)
+        if d is None:
+            raise EvalError("Unknown indicator: 'vwap'")
+        ind_key = d.id.key()
+
+        def compute():
+            close = series_from_history(history, "close")
+            vol = series_from_history(history, "volume")
+            return ind_vwap(close, vol, length)
+
+        return cache.get_or_compute(indicator_key=ind_key, params=(length,), event_index=ev.index, compute=compute)
 
     raise EvalError(f"Unhandled function at runtime: {fn!r}")
 

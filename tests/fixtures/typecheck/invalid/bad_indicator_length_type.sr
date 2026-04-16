@@ -1,0 +1,4 @@
+rule "Bad indicator length" in underlying:
+    when bar.close > ema(close, 3%):
+        then annotate(note="bad")
+

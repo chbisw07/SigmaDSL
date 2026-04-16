@@ -1,5 +1,20 @@
 {
   "engine_version": "v0.4-a",
+  "indicators": {
+    "pinned": [
+      "atr@1",
+      "ema@1",
+      "rsi@1",
+      "vwap@1"
+    ],
+    "referenced": [
+      "atr@1",
+      "ema@1",
+      "rsi@1",
+      "vwap@1"
+    ],
+    "registry_version": "0.5-a"
+  },
   "input": {
     "csv": {
       "columns": [
@@ -66,12 +81,12 @@
   "rules": {
     "files": [
       {
-        "path": "tests/fixtures/eval/rules_basic.sr",
-        "sha256": "da8b42af957746cb58a9f4b779155701e30f12ae9ba899946b796643336cf965",
-        "text": "rule \"EQ: Close GT 100\" in underlying:\n    when bar.close > 100:\n        then emit_signal(kind=\"GT100\", reason=\"close_gt_100\", strength=0.7)\n    else:\n        then annotate(note=\"close_le_100\")\n\nrule \"EQ: Breakout\" in underlying:\n    when bar.close > prior_high(2):\n        then emit_signal(kind=\"BREAKOUT\", reason=\"close_gt_prior_high\")\n\n"
+        "path": "tests/fixtures/eval/rules_indicators.sr",
+        "sha256": "966e1ea28ad80ed327f6a6bb4de93b61a9b0ca453aff2ce299e02ddd75f9bb92",
+        "text": "rule \"EQ: Trend Up (EMA/RSI)\" in underlying:\n    when bar.close > ema(close, 3) and rsi(close, 3) > 50%:\n        then emit_signal(kind=\"TREND_UP\", reason=\"close_gt_ema3_and_rsi_gt_50pct\")\n\nrule \"EQ: ATR High\" in underlying:\n    when atr(3) > 3:\n        then annotate(note=\"atr_gt_3\")\n\nrule \"EQ: Above VWAP(2)\" in underlying:\n    when bar.close > vwap(2):\n        then emit_signal(kind=\"ABOVE_VWAP2\", reason=\"close_gt_vwap2\")\n\n"
       }
     ]
   },
   "schema": "sigmadsl.runlog",
-  "schema_version": "0.4-a"
+  "schema_version": "0.5-a"
 }

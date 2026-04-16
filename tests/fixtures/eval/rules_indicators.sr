@@ -1,0 +1,12 @@
+rule "EQ: Trend Up (EMA/RSI)" in underlying:
+    when bar.close > ema(close, 3) and rsi(close, 3) > 50%:
+        then emit_signal(kind="TREND_UP", reason="close_gt_ema3_and_rsi_gt_50pct")
+
+rule "EQ: ATR High" in underlying:
+    when atr(3) > 3:
+        then annotate(note="atr_gt_3")
+
+rule "EQ: Above VWAP(2)" in underlying:
+    when bar.close > vwap(2):
+        then emit_signal(kind="ABOVE_VWAP2", reason="close_gt_vwap2")
+

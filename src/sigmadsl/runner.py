@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
 from .evaluator import CompiledRule, EvalError, EvalResult, compile_source_file, evaluate_underlying
+from .indicators import INDICATOR_REGISTRY_VERSION, pinned_indicator_keys, referenced_indicator_keys
 from .linting import lint_text
 from .parser import parse_source
 from .paths import discover_sr_files
@@ -12,6 +13,7 @@ from .runlog import (
     RUNLOG_SCHEMA,
     RUNLOG_SCHEMA_VERSION,
     CsvSourceMeta,
+    IndicatorsMeta,
     RuleSource,
     RunLog,
     load_runlog,
@@ -22,17 +24,18 @@ from .typechecker import typecheck_source_file
 
 
 def load_compiled_rules(path: Path) -> tuple[list[CompiledRule], list[Diagnostic]]:
-    compiled, _, diags = load_compiled_rules_with_sources(path)
+    compiled, _, _, diags = load_compiled_rules_with_sources(path)
     return compiled, diags
 
 
-def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], list[RuleSource], list[Diagnostic]]:
+def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], list[RuleSource], tuple[str, ...], list[Diagnostic]]:
     files = discover_sr_files(path)
     if not files:
-        return [], [], [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
+        return [], [], (), [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
 
     rules: list[CompiledRule] = []
     sources: list[RuleSource] = []
+    indicator_keys: set[str] = set()
     diags: list[Diagnostic] = []
 
     for file in files:
@@ -50,8 +53,9 @@ def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], li
         # Only include rules from files with no diagnostics to keep execution safe.
         if not [d for d in diags if d.location.file == file]:
             rules.extend(compile_source_file(sf))
+            indicator_keys.update(referenced_indicator_keys(sf))
 
-    return rules, sources, sorted(diags)
+    return rules, sources, tuple(sorted(indicator_keys)), sorted(diags)
 
 
 def run_underlying_from_csv(
@@ -96,7 +100,7 @@ def run_underlying_from_csv_with_log(
 
     from .csv_input import load_underlying_events_csv_with_meta
 
-    compiled, sources, rule_diags = load_compiled_rules_with_sources(rules_path)
+    compiled, sources, referenced_inds, rule_diags = load_compiled_rules_with_sources(rules_path)
     if rule_diags:
         return None, rule_diags
 
@@ -131,6 +135,11 @@ def run_underlying_from_csv_with_log(
                 row_count=meta.row_count,
             ),
             events=tuple(events),
+            indicators=IndicatorsMeta(
+                registry_version=INDICATOR_REGISTRY_VERSION,
+                pinned=pinned_indicator_keys(),
+                referenced=referenced_inds,
+            ),
         )
         log_diags = write_runlog(log_out, log)
         if log_diags:
@@ -176,6 +185,19 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
 
     if all_diags:
         return None, sorted(all_diags)
+
+    if log.indicators is not None:
+        available = set(pinned_indicator_keys())
+        missing = sorted(k for k in log.indicators.referenced if k not in available)
+        if missing:
+            return None, [
+                diag(
+                    code="SD545",
+                    severity=Severity.error,
+                    message=f"Replay requires unsupported indicator versions: {missing!r}",
+                    file=log_path,
+                )
+            ]
 
     engine_version = engine_version_override or log.engine_version
     try:

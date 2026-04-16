@@ -1,0 +1,5 @@
+{"event_index": 1, "id": "D0001", "kind": "signal", "reason": "close_gt_ema3_and_rsi_gt_50pct", "rule_name": "EQ: Trend Up (EMA/RSI)", "signal_kind": "TREND_UP", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:20:00", "verb": "emit_signal"}
+{"event_index": 1, "id": "D0002", "kind": "signal", "reason": "close_gt_vwap2", "rule_name": "EQ: Above VWAP(2)", "signal_kind": "ABOVE_VWAP2", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:20:00", "verb": "emit_signal"}
+{"event_index": 2, "id": "D0003", "kind": "signal", "reason": "close_gt_ema3_and_rsi_gt_50pct", "rule_name": "EQ: Trend Up (EMA/RSI)", "signal_kind": "TREND_UP", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:25:00", "verb": "emit_signal"}
+{"event_index": 2, "id": "D0004", "kind": "annotation", "note": "atr_gt_3", "rule_name": "EQ: ATR High", "symbol": "TCS", "timestamp": "2026-01-01T09:25:00", "verb": "annotate"}
+{"event_index": 2, "id": "D0005", "kind": "signal", "reason": "close_gt_vwap2", "rule_name": "EQ: Above VWAP(2)", "signal_kind": "ABOVE_VWAP2", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:25:00", "verb": "emit_signal"}

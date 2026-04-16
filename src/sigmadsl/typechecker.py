@@ -406,6 +406,117 @@ def _infer_call_type(node: Call, env: _Env, diags: list[Diagnostic]) -> Type:
             )
         return PRICE
 
+    if fn == "ema":
+        if len(node.args) != 2:
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() expects 2 arguments, got {len(node.args)}",
+                    file=env.file,
+                    line=node.span.line,
+                    column=node.span.column,
+                )
+            )
+            return UNKNOWN
+        series_t = _infer_node_type(node.args[0], env, diags)
+        length_t = _infer_node_type(node.args[1], env, diags)
+        if length_t != UNKNOWN and not type_matches(INT, length_t):
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() length: expected Int, got {length_t}",
+                    file=env.file,
+                    line=node.args[1].span.line,
+                    column=node.args[1].span.column,
+                )
+            )
+        return widen_literal(series_t)
+
+    if fn == "rsi":
+        if len(node.args) != 2:
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() expects 2 arguments, got {len(node.args)}",
+                    file=env.file,
+                    line=node.span.line,
+                    column=node.span.column,
+                )
+            )
+            return UNKNOWN
+        _ = _infer_node_type(node.args[0], env, diags)
+        length_t = _infer_node_type(node.args[1], env, diags)
+        if length_t != UNKNOWN and not type_matches(INT, length_t):
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() length: expected Int, got {length_t}",
+                    file=env.file,
+                    line=node.args[1].span.line,
+                    column=node.args[1].span.column,
+                )
+            )
+        return PERCENT
+
+    if fn == "atr":
+        if len(node.args) != 1:
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() expects 1 argument, got {len(node.args)}",
+                    file=env.file,
+                    line=node.span.line,
+                    column=node.span.column,
+                )
+            )
+            return UNKNOWN
+        length_t = _infer_node_type(node.args[0], env, diags)
+        if length_t != UNKNOWN and not type_matches(INT, length_t):
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() length: expected Int, got {length_t}",
+                    file=env.file,
+                    line=node.args[0].span.line,
+                    column=node.args[0].span.column,
+                )
+            )
+        return PRICE
+
+    if fn == "vwap":
+        if len(node.args) not in (0, 1):
+            diags.append(
+                diag(
+                    code="SD300",
+                    severity=Severity.error,
+                    message=f"{fn}() expects 0 or 1 arguments, got {len(node.args)}",
+                    file=env.file,
+                    line=node.span.line,
+                    column=node.span.column,
+                )
+            )
+            return UNKNOWN
+        if len(node.args) == 1:
+            length_t = _infer_node_type(node.args[0], env, diags)
+            if length_t != UNKNOWN and not type_matches(INT, length_t):
+                diags.append(
+                    diag(
+                        code="SD300",
+                        severity=Severity.error,
+                        message=f"{fn}() length: expected Int, got {length_t}",
+                        file=env.file,
+                        line=node.args[0].span.line,
+                        column=node.args[0].span.column,
+                    )
+                )
+        return PRICE
+
     return UNKNOWN
 
 
@@ -488,4 +599,3 @@ def _infer_binary_type(node: BinaryOp, env: _Env, diags: list[Diagnostic]) -> Ty
         return UNKNOWN
 
     return UNKNOWN
-
