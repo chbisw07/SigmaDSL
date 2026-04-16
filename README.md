@@ -84,6 +84,16 @@ Replay it deterministically:
 sigmadsl replay --log runlog.json
 ```
 
+## Diff + debug (Sprint 0.4-B)
+
+Compare two run logs deterministically:
+
+```bash
+sigmadsl diff run_a.json run_b.json
+```
+
+See `docs/debugging_determinism.md` for the v0.4 replay+diff+explain workflow.
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):

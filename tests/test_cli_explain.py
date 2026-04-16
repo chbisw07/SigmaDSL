@@ -25,3 +25,22 @@ def test_cli_explain_d0003_golden():
     golden = Path("tests/golden/explain_d0003.txt").read_text(encoding="utf-8")
     assert result.output == golden
 
+
+def test_cli_explain_rule_not_fired_golden():
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--rule",
+            "EQ: Breakout",
+            "--event-index",
+            "0",
+            "--input",
+            "tests/fixtures/run/bars_basic.csv",
+            "--rules",
+            "tests/fixtures/eval/rules_basic.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/explain_rule_breakout_event0.txt").read_text(encoding="utf-8")
+    assert result.output == golden

@@ -232,3 +232,71 @@ pytest
 - diff/analyzer UX (`sigmadsl diff`) is deferred to a later sprint (v0.4-B)
 - replay currently re-emits decisions only (trace is re-computed but not persisted separately yet)
 - multi-symbol replay is still deferred (matches v0.3 runner scope)
+
+---
+
+## Sprint 0.4-B — Explain UX + golden suite
+
+### Sprint goal
+
+Improve the debugging and regression protection workflow:
+
+- make `sigmadsl explain` substantially more useful for “why did it fire?” and “why didn’t it fire?”
+- add `sigmadsl diff` to compare two run logs deterministically (counts + first divergence)
+- expand goldens to protect explain/diff behavior
+- explicitly test and document timestamp/timezone invariants
+
+### What was implemented
+
+- **Explain UX improvements** (`src/sigmadsl/explain.py`, `src/sigmadsl/cli.py`):
+  - decision mode (existing): `sigmadsl explain --decision-id D0003 ...`
+    - now includes a short human-readable “Why it fired” summary plus JSON blocks
+  - rule/event mode (new): `sigmadsl explain --rule "Rule Name" --event-index 0 ...`
+    - answers “why didn’t it fire?” using the per-rule trace at that event
+- **Diff command** (`src/sigmadsl/diffing.py`, `src/sigmadsl/cli.py`):
+  - `sigmadsl diff run_a.json run_b.json`
+  - compares replayed decision JSONL outputs deterministically
+  - prints counts and the first divergence (index + decision JSON line)
+  - exit code: `0` equal, `1` different, `2` errors
+- **Golden suite expansion**:
+  - explain goldens (decision and rule-not-fired)
+  - diff goldens (equal and first divergence)
+- **Timestamp/timezone invariants**:
+  - test that outputs are invariant to the process `TZ`
+  - test that timestamps are treated as opaque strings and preserved exactly (including offsets)
+
+### Commands to run
+
+Explain:
+
+```bash
+sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+sigmadsl explain --rule "EQ: Breakout" --event-index 0 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+Diff (using run logs):
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr --log-out a.json
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic_variant.sr --log-out b.json
+sigmadsl diff a.json b.json
+```
+
+Tests:
+
+```bash
+pytest
+```
+
+### Timestamp policy (v0.4)
+
+- v0.4 treats input timestamps as **opaque strings** and preserves them in:
+  - decision outputs,
+  - traces,
+  - run logs.
+- No timezone normalization/parsing exists yet; determinism relies on stable input strings.
+
+### Known limitations (intentionally deferred)
+
+- richer explain views over entire runs and cross-run trace diffs are deferred
+- diff operates on decision outputs only (not a full trace diff)

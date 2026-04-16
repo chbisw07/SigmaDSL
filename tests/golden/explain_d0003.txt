@@ -1,4 +1,16 @@
-Decision D0003
+Explain (decision)
+- id: D0003
+- kind: signal
+- rule: EQ: Breakout
+- event: TCS #1 @ 2026-01-01T09:20:00
+
+Why it fired
+- selected_branch: when
+- when: bar . close > prior_high ( 2 ) => True
+- actions:
+  - emit_signal(kind="BREAKOUT", reason="close_gt_prior_high") -> D0003
+
+Decision
 {
   "event_index": 1,
   "id": "D0003",
@@ -29,6 +41,9 @@ Trace
       }
     ],
     "context": "underlying",
+    "decisions_emitted": [
+      "D0003"
+    ],
     "evaluated_branches": [
       {
         "branch_kind": "when",
@@ -36,6 +51,7 @@ Trace
         "result": true
       }
     ],
+    "fired": true,
     "rule_name": "EQ: Breakout",
     "selected_branch": "when"
   }

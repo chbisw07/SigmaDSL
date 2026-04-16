@@ -214,47 +214,7 @@ def explain_decision_text(result: EvalResult, decision_id: str) -> str | None:
     """
     Basic explain output (v0.3-B): show decision + the rule/branch trace that emitted it.
     """
+    # Kept for backward compatibility; v0.4-B prefers `sigmadsl.explain.explain_decision`.
+    from .explain import explain_decision
 
-    decision = next((d for d in result.decisions if d.id == decision_id), None)
-    if decision is None:
-        return None
-
-    # Find the rule trace that emitted this decision id.
-    emitting_rule = None
-    emitting_event = None
-    for ev in result.trace.events:
-        for rt in ev.rules:
-            if decision_id in rt.decisions_emitted:
-                emitting_event = ev
-                emitting_rule = rt
-                break
-        if emitting_rule is not None:
-            break
-
-    lines: list[str] = []
-    lines.append(f"Decision {decision_id}\n")
-    lines.append(json.dumps(decision.to_dict(), sort_keys=True, indent=2) + "\n")
-
-    if emitting_event is None or emitting_rule is None:
-        lines.append("Trace: <not found>\n")
-        return "".join(lines)
-
-    lines.append("Trace\n")
-    lines.append(
-        json.dumps(
-            {
-                "event": emitting_event.to_dict()["event"],
-                "rule": {
-                    "rule_name": emitting_rule.rule_name,
-                    "context": emitting_rule.context,
-                    "selected_branch": emitting_rule.selected_branch,
-                    "evaluated_branches": [b.to_dict() for b in emitting_rule.evaluated_branches],
-                    "actions": [a.to_dict() for a in emitting_rule.actions],
-                },
-            },
-            sort_keys=True,
-            indent=2,
-        )
-        + "\n"
-    )
-    return "".join(lines)
+    return explain_decision(result, decision_id)

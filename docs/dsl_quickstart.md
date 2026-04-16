@@ -145,6 +145,12 @@ Explain a decision (re-runs deterministically and prints the emitting rule trace
 sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
 ```
 
+Explain a rule that didn’t fire at an event:
+
+```bash
+sigmadsl explain --rule "EQ: Breakout" --event-index 0 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
 CSV requirements (v0.3-B):
 
 - required columns: `symbol,timestamp,open,high,low,close,volume`
@@ -164,3 +170,11 @@ Replay it deterministically (output should match the original `run` output exact
 ```bash
 sigmadsl replay --log runlog.json
 ```
+
+Diff two run logs (v0.4-B):
+
+```bash
+sigmadsl diff run_a.json run_b.json
+```
+
+See `docs/debugging_determinism.md` for a concise debugging workflow.

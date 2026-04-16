@@ -448,6 +448,24 @@ Notes:
 - v0.4-A replay does not rely on the current filesystem state of original rule/CSV files.
 - timezone/rounding/indicator pins are not yet fully specified; they must be added to the log before indicator-heavy versions (v0.5+).
 
+### 6.3.2 v0.4-B diff contract (decisions)
+
+**Status: CURRENTLY DECIDED (v0.4-B implementation)**  
+Rationale: Determinism debugging needs a stable, testable comparison tool.  
+Implications: Equality definition and divergence reporting are part of the CLI contract.
+
+`sigmadsl diff <run_a.json> <run_b.json>` compares two run logs by:
+
+1) replaying each log deterministically, and
+2) comparing the resulting **decision JSONL lines** exactly (byte-for-byte per line, in order).
+
+Equality:
+- runs are equal iff the ordered decision JSONL streams are identical.
+
+First divergence:
+- the first index where decision lines differ, or
+- the first index where one stream ends (length mismatch).
+
 ---
 
 # Chapter 7 — Data Model and Market Data Interfaces
@@ -467,17 +485,23 @@ Baseline entities:
 
 ## 7.2 Time and timezone policy
 
-**Status: PROVISIONAL**  
-Rationale: Determinism demands clarity; exact policies need testing across environments.  
-Implications: Decide in v0.3–v0.4 and lock with golden tests.
+**Status: CURRENTLY DECIDED (v0.4 implementation)**  
+Rationale: v0.4 needs deterministic behavior across OS/timezone settings; a minimal policy is required now.  
+Implications: Timestamp parsing/normalization can be added later, but must be versioned and golden-tested.
 
-Minimum policy requirements:
-- All timestamps in input data must be explicitly parsed with a declared timezone.
-- Runtime must not assume system timezone.
-- Output must encode timestamps in a canonical form (e.g., ISO-8601 with offset).
+v0.4 policy:
+- the runner treats `timestamp` as an **opaque string identity**
+- timestamps are preserved exactly in:
+  - decision outputs,
+  - traces,
+  - run logs,
+  - replay outputs
+- the runtime does not parse timestamps or normalize timezones in v0.4
+- outputs must be invariant to the process/system timezone (`TZ`) (covered by tests)
 
-Open questions:
-- Use exchange-local timezone (IST) as canonical, or UTC canonical with explicit conversion?
+Notes / deferred:
+- A canonical timezone/normalization policy (IST vs UTC) is still required before indicator-heavy versions.
+- When timestamp parsing is introduced, it must be logged/pinned and replayed deterministically.
 
 ## 7.3 Data quality and “known/unknown” semantics
 
@@ -1339,6 +1363,12 @@ v0.4-A concretizes the replay surface:
 
 - `run --log-out runlog.json` writes a self-contained run log (schema `sigmadsl.runlog` `0.4-a`)
 - `replay --log runlog.json` re-evaluates from embedded snapshots and re-emits decision output deterministically
+
+v0.4-B concretizes the debugging surface:
+
+- `explain --decision-id D0003 ...` prints a stable “why it fired” summary + the emitting trace record
+- `explain --rule "..." --event-index N ...` prints a stable “why it did not fire” view using the per-rule trace at that event
+- `diff run_a.json run_b.json` compares two run logs deterministically (decision counts + first divergence)
 
 ## 21.2 Diagnostics requirements
 

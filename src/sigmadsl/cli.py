@@ -5,10 +5,11 @@ from pathlib import Path
 import typer
 
 from .diagnostics import Diagnostic
+from .diffing import diff_run_logs
 from .linting import lint_paths
+from .explain import explain_decision, explain_rule_at_event
 from .runner import (
     decision_jsonl_lines,
-    explain_decision_text,
     replay_from_log,
     run_underlying_from_csv_with_log,
 )
@@ -103,12 +104,18 @@ def run(
 
 @app.command()
 def explain(
-    decision_id: str = typer.Option(..., "--decision-id", help="Decision id to explain (e.g., D0003)"),
+    decision_id: str | None = typer.Option(None, "--decision-id", help="Decision id to explain (e.g., D0003)"),
+    rule: str | None = typer.Option(None, "--rule", help="Rule name to explain"),
+    event_index: int | None = typer.Option(None, "--event-index", help="Event index (0-based) for --rule mode"),
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
 ):
     """
-    Explain a single decision by re-running evaluation and printing the emitting rule trace (Sprint 0.3-B).
+    Explain deterministic evaluation outcomes (Sprint 0.4-B).
+
+    Modes:
+    - `--decision-id`: explain why that decision fired
+    - `--rule` + `--event-index`: explain why a rule fired or did not fire at a specific event
     """
 
     result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, log_out=None)
@@ -118,11 +125,24 @@ def explain(
         raise typer.Exit(code=1)
     assert result is not None
 
-    text = explain_decision_text(result, decision_id)
-    if text is None:
-        typer.echo(f"Decision not found: {decision_id}", err=True)
-        raise typer.Exit(code=1)
-    typer.echo(text.rstrip("\n"))
+    if decision_id is not None:
+        text = explain_decision(result, decision_id)
+        if text is None:
+            typer.echo(f"Decision not found: {decision_id}", err=True)
+            raise typer.Exit(code=1)
+        typer.echo(text.rstrip("\n"))
+        return
+
+    if rule is not None and event_index is not None:
+        text = explain_rule_at_event(result, rule_name=rule, event_index=event_index)
+        if text is None:
+            typer.echo("Explain failed: rule or event not found", err=True)
+            raise typer.Exit(code=1)
+        typer.echo(text.rstrip("\n"))
+        return
+
+    typer.echo("Explain requires --decision-id or (--rule and --event-index)", err=True)
+    raise typer.Exit(code=2)
 
 
 @app.command()
@@ -154,3 +174,24 @@ def replay(
 
         decisions = [json.loads(l) for l in decision_jsonl_lines(result)]
         typer.echo(json.dumps(decisions, sort_keys=True, indent=2))
+
+
+@app.command()
+def diff(
+    log_a: Path = typer.Argument(..., exists=True, readable=True),
+    log_b: Path = typer.Argument(..., exists=True, readable=True),
+):
+    """
+    Compare two run logs deterministically (Sprint 0.4-B).
+
+    Exit code: 0 if equal, 1 if different, 2 on errors.
+    """
+
+    summary, diags = diff_run_logs(log_a, log_b)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=2)
+    assert summary is not None
+    typer.echo(summary.to_text().rstrip("\n"))
+    raise typer.Exit(code=0 if summary.equal else 1)

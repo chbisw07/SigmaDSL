@@ -1,0 +1,9 @@
+Diff
+- equal: false
+- decisions_a: 5 (signal=4, annotation=1)
+- decisions_b: 5 (signal=4, annotation=1)
+- first_divergence_index: 0
+A
+{"event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100", "rule_name": "EQ: Close GT 100", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "verb": "annotate"}
+B
+{"event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100_variant", "rule_name": "EQ: Close GT 100", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "verb": "annotate"}
