@@ -1,0 +1,4 @@
+rule "EQ: Violation" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=100, reason="not_allowed_in_signal")
+

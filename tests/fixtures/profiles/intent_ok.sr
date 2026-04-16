@@ -1,0 +1,4 @@
+rule "EQ: Intent Demo" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=100, reason="demo_intent")
+

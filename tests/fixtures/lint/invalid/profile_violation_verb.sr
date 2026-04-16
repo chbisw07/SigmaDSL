@@ -1,4 +1,3 @@
 rule "EQ: Profile Violation" in underlying:
     when true:
-        then block_all_trades(reason="risk_verb_not_allowed_yet")
-
+        then block(reason="risk_verb_not_allowed_in_signal")

@@ -1,8 +1,11 @@
 Explain (decision)
 - id: D0003
 - kind: signal
+- profile: signal
+- verb: emit_signal
 - rule: EQ: Breakout
 - event: TCS #1 @ 2026-01-01T09:20:00
+- trace_ref: {"action_index": 0, "event_index": 1, "rule_name": "EQ: Breakout"}
 
 Why it fired
 - selected_branch: when
@@ -12,15 +15,25 @@ Why it fired
 
 Decision
 {
+  "context": "underlying",
   "event_index": 1,
   "id": "D0003",
   "kind": "signal",
+  "profile": "signal",
   "reason": "close_gt_prior_high",
   "rule_name": "EQ: Breakout",
+  "schema": "sigmadsl.decision",
+  "schema_version": "1.0-a",
   "signal_kind": "BREAKOUT",
   "strength": null,
   "symbol": "TCS",
-  "timestamp": "2026-01-01T09:20:00"
+  "timestamp": "2026-01-01T09:20:00",
+  "trace_ref": {
+    "action_index": 0,
+    "event_index": 1,
+    "rule_name": "EQ: Breakout"
+  },
+  "verb": "emit_signal"
 }
 Trace
 {

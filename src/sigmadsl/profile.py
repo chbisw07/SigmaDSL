@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import ast
+from .decision_profiles import DecisionProfile
 from .diagnostics import Diagnostic, Severity, diag
 from .expr import Call, ExprNode, dotted_name
 from .indicators import INDICATOR_REGISTRY_VERSION, pinned_indicator_keys, referenced_indicator_keys
@@ -61,7 +62,7 @@ def profile_paths(path: Path) -> tuple[ProfileSummary | None, list[Diagnostic]]:
             continue
 
         all_diags.extend(typecheck_source_file(m.source_file))
-        all_diags.extend(lint_text(m.text, file=m.path))
+        all_diags.extend(lint_text(m.text, profile=DecisionProfile.signal, file=m.path))
 
         if [d for d in all_diags if d.location.file == m.path]:
             continue

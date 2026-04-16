@@ -4,9 +4,10 @@ from pathlib import Path
 
 import typer
 
+from .decision_profiles import DecisionProfile, parse_profile
 from .diagnostics import Diagnostic
 from .diffing import diff_run_logs
-from .linting import lint_paths
+from .linting import lint_paths_with_profile
 from .profile import profile_paths
 from .packaging import create_pack, validate_pack
 from .explain import explain_decision, explain_rule_at_event
@@ -21,7 +22,7 @@ app = typer.Typer(add_completion=False, no_args_is_help=True)
 
 @app.callback()
 def _main():
-    """SigmaDSL CLI (sprint-based; v0.3 includes deterministic run + trace)."""
+    """SigmaDSL CLI (sprint-based; v1.0 adds profiles + stable decision schema)."""
 
 
 def _format_diag(diag: Diagnostic) -> str:
@@ -46,6 +47,7 @@ def _format_diag(diag: Diagnostic) -> str:
 def validate(
     path: Path | None = typer.Argument(None),
     pack: Path | None = typer.Option(None, "--pack", exists=True, readable=True, help="Validate a packaged rule pack"),
+    profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
 ):
     """
     Validate one SigmaDSL source file (or directory of .sr files).
@@ -55,14 +57,19 @@ def validate(
         typer.echo("validate requires either a path argument or --pack", err=True)
         raise typer.Exit(code=2)
 
+    p = parse_profile(profile)
+    if p is None:
+        typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
+        raise typer.Exit(code=2)
+
     if pack is not None:
-        diags = validate_pack(pack)
+        diags = validate_pack(pack, profile=p)
     else:
         assert path is not None
         if not path.exists() or not path.is_dir() and not path.is_file():
             typer.echo("Invalid path", err=True)
             raise typer.Exit(code=2)
-        diags = validate_paths(path)
+        diags = validate_paths(path, profile=p)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -71,12 +78,20 @@ def validate(
 
 
 @app.command()
-def lint(path: Path = typer.Argument(..., exists=True, readable=True)):
+def lint(
+    path: Path = typer.Argument(..., exists=True, readable=True),
+    profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
+):
     """
     Lint SigmaDSL sources for guardrails and profile compliance.
     """
 
-    diags: list[Diagnostic] = lint_paths(path)
+    p = parse_profile(profile)
+    if p is None:
+        typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
+        raise typer.Exit(code=2)
+
+    diags: list[Diagnostic] = lint_paths_with_profile(path, profile=p)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -88,6 +103,7 @@ def lint(path: Path = typer.Argument(..., exists=True, readable=True)):
 def run(
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
+    profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
     format: str = typer.Option("jsonl", "--format", help="Output format: jsonl or json"),
     log_out: Path | None = typer.Option(None, "--log-out", help="Write a replayable run log (Sprint 0.4-A)"),
 ):
@@ -95,7 +111,12 @@ def run(
     Run SigmaDSL rules deterministically on a bars CSV (Sprint 0.3-B; logs added in 0.4-A).
     """
 
-    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, log_out=log_out)
+    p = parse_profile(profile)
+    if p is None:
+        typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
+        raise typer.Exit(code=2)
+
+    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, profile=p, log_out=log_out)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -125,6 +146,7 @@ def explain(
     event_index: int | None = typer.Option(None, "--event-index", help="Event index (0-based) for --rule mode"),
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
+    profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
 ):
     """
     Explain deterministic evaluation outcomes (Sprint 0.4-B).
@@ -134,7 +156,12 @@ def explain(
     - `--rule` + `--event-index`: explain why a rule fired or did not fire at a specific event
     """
 
-    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, log_out=None)
+    p = parse_profile(profile)
+    if p is None:
+        typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
+        raise typer.Exit(code=2)
+
+    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, profile=p, log_out=None)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))

@@ -15,8 +15,12 @@ class DiffSummary:
     count_b: int
     signals_a: int
     annotations_a: int
+    intents_a: int
+    constraints_a: int
     signals_b: int
     annotations_b: int
+    intents_b: int
+    constraints_b: int
     first_divergence_index: int | None
     a_line: str | None
     b_line: str | None
@@ -26,10 +30,10 @@ class DiffSummary:
         lines.append("Diff\n")
         lines.append(f"- equal: {'true' if self.equal else 'false'}\n")
         lines.append(
-            f"- decisions_a: {self.count_a} (signal={self.signals_a}, annotation={self.annotations_a})\n"
+            f"- decisions_a: {self.count_a} (signal={self.signals_a}, annotation={self.annotations_a}, intent={self.intents_a}, constraint={self.constraints_a})\n"
         )
         lines.append(
-            f"- decisions_b: {self.count_b} (signal={self.signals_b}, annotation={self.annotations_b})\n"
+            f"- decisions_b: {self.count_b} (signal={self.signals_b}, annotation={self.annotations_b}, intent={self.intents_b}, constraint={self.constraints_b})\n"
         )
         if self.first_divergence_index is None:
             lines.append("- first_divergence: <none>\n")
@@ -62,8 +66,8 @@ def diff_run_logs(log_a: Path, log_b: Path) -> tuple[DiffSummary | None, list[Di
     a_line = lines_a[i] if i is not None and i < len(lines_a) else None
     b_line = lines_b[i] if i is not None and i < len(lines_b) else None
 
-    sa, aa = _counts(lines_a)
-    sb, ab = _counts(lines_b)
+    sa, aa, ia, ca = _counts(lines_a)
+    sb, ab, ib, cb = _counts(lines_b)
 
     return (
         DiffSummary(
@@ -72,8 +76,12 @@ def diff_run_logs(log_a: Path, log_b: Path) -> tuple[DiffSummary | None, list[Di
             count_b=len(lines_b),
             signals_a=sa,
             annotations_a=aa,
+            intents_a=ia,
+            constraints_a=ca,
             signals_b=sb,
             annotations_b=ab,
+            intents_b=ib,
+            constraints_b=cb,
             first_divergence_index=i,
             a_line=a_line,
             b_line=b_line,
@@ -92,9 +100,11 @@ def _first_divergence(a: list[str], b: list[str]) -> int | None:
     return None
 
 
-def _counts(lines: list[str]) -> tuple[int, int]:
+def _counts(lines: list[str]) -> tuple[int, int, int, int]:
     signals = 0
     annotations = 0
+    intents = 0
+    constraints = 0
     for l in lines:
         try:
             d = json.loads(l)
@@ -107,6 +117,10 @@ def _counts(lines: list[str]) -> tuple[int, int]:
             signals += 1
         elif kind == "annotation":
             annotations += 1
+        elif kind == "intent":
+            intents += 1
+        elif kind == "constraint":
+            constraints += 1
         else:
             annotations += 1
-    return signals, annotations
+    return signals, annotations, intents, constraints

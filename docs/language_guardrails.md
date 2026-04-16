@@ -61,19 +61,21 @@ Reason: non-deterministic or side-effecting calls are incompatible with replayab
 SigmaDSL defines conceptual profiles:
 
 - `signal`: emit classifications/signals
-- `intent`: express intent (later)
-- `plan`: generate broker-agnostic plans (later)
-- `risk`: enforce constraints (later)
+- `intent`: express intent outputs (no planning yet)
+- `plan`: generate broker-agnostic plans (deferred)
+- `risk`: express constraints/blocks (enforcement deferred)
 
-In **v0.2**, only the **`signal` profile** is supported.
-Practically, this means only **signal verbs** are allowed in `then` lines.
+In **v1.0-A**, `signal`, `intent`, and `risk` profiles are supported as **validation + output contracts**.
+Profile selection is currently done via the CLI `--profile` flag (there is not yet an in-language profile header).
+
+See `docs/decision_profiles.md` for the implemented verb allowlists and output schema.
 
 ---
 
 ## CLI: `lint` vs `validate`
 
 - `sigmadsl lint <path>`: guardrails + profile compliance (forbidden constructs, verb allowlist, function-call whitelist)
-- `sigmadsl validate <path>`: parse + type check (and reports deterministic diagnostics)
+- `sigmadsl validate <path>`: parse + type check + profile compliance
 
 Both commands accept a file path or a directory (recursively validates/lints `*.sr`).
 
@@ -94,5 +96,4 @@ Guardrails / lint (Sprint 0.2-B):
 - `SD402`: forbidden function definition
 - `SD403`: forbidden function call (not whitelisted)
 - `SD405`: forbidden import
-- `SD410`: profile violation (non-signal verb)
-
+- `SD410`: profile violation (verb not allowed for selected profile)

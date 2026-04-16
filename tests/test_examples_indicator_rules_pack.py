@@ -92,6 +92,6 @@ def test_replay_equivalence_for_indicator_example_pack(tmp_path: Path):
     assert replay_res.output == run_res.output
 
     d = json.loads(log_path.read_text(encoding="utf-8"))
-    assert d["schema_version"] == "0.5-a"
+    assert d["schema_version"] == "1.0-a"
+    assert d["profile"] == "signal"
     assert sorted(d["indicators"]["referenced"]) == ["ema@1", "rsi@1", "vwap@1"]
-

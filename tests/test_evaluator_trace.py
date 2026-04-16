@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from sigmadsl.evaluator import compile_source_file, evaluate_underlying
+from sigmadsl.decision_profiles import DecisionProfile
 from sigmadsl.linting import lint_text
 from sigmadsl.parser import parse_source
 from sigmadsl.runtime_models import Bar, UnderlyingEvent, dec
@@ -32,7 +33,7 @@ def _compile_rules(path: Path):
     assert sf is not None
     assert parse_diags == []
     assert typecheck_source_file(sf) == []
-    assert lint_text(text, file=path) == []
+    assert lint_text(text, profile=DecisionProfile.signal, file=path) == []
     return compile_source_file(sf)
 
 

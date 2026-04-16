@@ -6,8 +6,10 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
+from .decision_profiles import DecisionProfile
 from .diagnostics import Diagnostic, Severity, diag
 from .modules import LoadedModule, load_modules_for_path, module_name_for_file, resolve_import_closure
+from .profile_compliance import check_profile_compliance
 
 
 PACK_SCHEMA = "sigmadsl.pack"
@@ -167,7 +169,7 @@ def _write_pack_zip(
             write_bytes(zf, arc, m.text.encode("utf-8"))
 
 
-def validate_pack(path: Path) -> list[Diagnostic]:
+def validate_pack(path: Path, *, profile: DecisionProfile = DecisionProfile.signal) -> list[Diagnostic]:
     """
     Validate a pack artifact deterministically (v0.6-B).
 
@@ -181,14 +183,14 @@ def validate_pack(path: Path) -> list[Diagnostic]:
 
     try:
         with zipfile.ZipFile(path, "r") as zf:
-            return _validate_pack_zip(path=path, zf=zf)
+            return _validate_pack_zip(path=path, zf=zf, profile=profile)
     except zipfile.BadZipFile:
         return [diag(code="SD631", severity=Severity.error, message="Pack is not a valid zip file", file=path)]
     except Exception as e:
         return [diag(code="SD631", severity=Severity.error, message=f"Failed to read pack: {e}", file=path)]
 
 
-def _validate_pack_zip(*, path: Path, zf: zipfile.ZipFile) -> list[Diagnostic]:
+def _validate_pack_zip(*, path: Path, zf: zipfile.ZipFile, profile: DecisionProfile) -> list[Diagnostic]:
     diags: list[Diagnostic] = []
 
     try:
@@ -358,6 +360,7 @@ def _validate_pack_zip(*, path: Path, zf: zipfile.ZipFile) -> list[Diagnostic]:
         if m.source_file is None:
             continue
         type_diags.extend(typecheck_source_file(m.source_file))
+        type_diags.extend(check_profile_compliance(m.source_file, profile=profile, file=m.path))
     if type_diags:
         return [_wrap_diag_for_pack(pack_path=path, inner_path=d.location.file, inner=d) for d in sorted(type_diags)]
 

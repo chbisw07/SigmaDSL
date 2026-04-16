@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
+from .decision_profiles import DecisionProfile
 from .evaluator import CompiledRule, EvalError, EvalResult, compile_source_file, evaluate_underlying
 from .indicators import INDICATOR_REGISTRY_VERSION, pinned_indicator_keys, referenced_indicator_keys
 from .linting import lint_text
@@ -23,12 +24,14 @@ from .runlog import (
 from .typechecker import typecheck_source_file
 
 
-def load_compiled_rules(path: Path) -> tuple[list[CompiledRule], list[Diagnostic]]:
-    compiled, _, _, diags = load_compiled_rules_with_sources(path)
+def load_compiled_rules(path: Path, *, profile: DecisionProfile) -> tuple[list[CompiledRule], list[Diagnostic]]:
+    compiled, _, _, diags = load_compiled_rules_with_sources(path, profile=profile)
     return compiled, diags
 
 
-def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], list[RuleSource], tuple[str, ...], list[Diagnostic]]:
+def load_compiled_rules_with_sources(
+    path: Path, *, profile: DecisionProfile
+) -> tuple[list[CompiledRule], list[RuleSource], tuple[str, ...], list[Diagnostic]]:
     modules, index_diags, root = load_modules_for_path(path)
     if index_diags:
         return [], [], (), sorted(index_diags)
@@ -51,7 +54,7 @@ def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], li
             continue
 
         diags.extend(typecheck_source_file(m.source_file))
-        diags.extend(lint_text(m.text, file=m.path))
+        diags.extend(lint_text(m.text, profile=profile, file=m.path))
 
         # Only include rules from modules with no diagnostics to keep execution safe.
         if not [d for d in diags if d.location.file == m.path]:
@@ -65,11 +68,12 @@ def run_underlying_from_csv(
     *,
     rules_path: Path,
     input_csv: Path,
+    profile: DecisionProfile = DecisionProfile.signal,
     engine_version: str = "v0.3-b",
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
     from .csv_input import load_underlying_events_csv
 
-    compiled, rule_diags = load_compiled_rules(rules_path)
+    compiled, rule_diags = load_compiled_rules(rules_path, profile=profile)
     if rule_diags:
         return None, rule_diags
 
@@ -78,7 +82,7 @@ def run_underlying_from_csv(
         return None, csv_diags
 
     try:
-        return evaluate_underlying(compiled, events, engine_version=engine_version), []
+        return evaluate_underlying(compiled, events, profile=profile, engine_version=engine_version), []
     except EvalError as e:
         return None, [
             diag(
@@ -94,6 +98,7 @@ def run_underlying_from_csv_with_log(
     *,
     rules_path: Path,
     input_csv: Path,
+    profile: DecisionProfile = DecisionProfile.signal,
     engine_version: str = "v0.4-a",
     log_out: Path | None,
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
@@ -103,7 +108,7 @@ def run_underlying_from_csv_with_log(
 
     from .csv_input import load_underlying_events_csv_with_meta
 
-    compiled, sources, referenced_inds, rule_diags = load_compiled_rules_with_sources(rules_path)
+    compiled, sources, referenced_inds, rule_diags = load_compiled_rules_with_sources(rules_path, profile=profile)
     if rule_diags:
         return None, rule_diags
 
@@ -113,7 +118,7 @@ def run_underlying_from_csv_with_log(
     assert meta is not None
 
     try:
-        result = evaluate_underlying(compiled, events, engine_version=engine_version)
+        result = evaluate_underlying(compiled, events, profile=profile, engine_version=engine_version)
     except EvalError as e:
         return None, [
             diag(
@@ -130,6 +135,7 @@ def run_underlying_from_csv_with_log(
             schema=RUNLOG_SCHEMA,
             schema_version=RUNLOG_SCHEMA_VERSION,
             engine_version=engine_version,
+            profile=profile.value,
             rules=tuple(sources),
             input_csv=CsvSourceMeta(
                 path=str(input_csv),
@@ -164,6 +170,13 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
     compiled: list[CompiledRule] = []
     all_diags: list[Diagnostic] = []
 
+    profile = DecisionProfile.signal
+    if getattr(log, "profile", None):
+        try:
+            profile = DecisionProfile(str(getattr(log, "profile")))
+        except Exception:
+            profile = DecisionProfile.signal
+
     for rs in log.rules:
         if sha256_text(rs.text) != rs.sha256:
             all_diags.append(
@@ -182,7 +195,7 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
             continue
 
         all_diags.extend(typecheck_source_file(sf))
-        all_diags.extend(lint_text(rs.text, file=Path(rs.path)))
+        all_diags.extend(lint_text(rs.text, profile=profile, file=Path(rs.path)))
         if not [d for d in all_diags if d.location.file == Path(rs.path)]:
             compiled.extend(compile_source_file(sf))
 
@@ -204,7 +217,7 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
 
     engine_version = engine_version_override or log.engine_version
     try:
-        return evaluate_underlying(compiled, list(log.events), engine_version=engine_version), []
+        return evaluate_underlying(compiled, list(log.events), profile=profile, engine_version=engine_version), []
     except EvalError as e:
         return None, [
             diag(
@@ -225,13 +238,7 @@ def decision_jsonl_lines(result: EvalResult) -> list[str]:
 
     lines: list[str] = []
     for d in result.decisions:
-        o = d.to_dict()
-        # Make verb explicit in the runner output schema without changing Decision.to_dict().
-        if o.get("kind") == "signal":
-            o["verb"] = "emit_signal"
-        elif o.get("kind") == "annotation":
-            o["verb"] = "annotate"
-        lines.append(json.dumps(o, sort_keys=True) + "\n")
+        lines.append(json.dumps(d.to_dict(), sort_keys=True) + "\n")
     return lines
 
 

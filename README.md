@@ -117,6 +117,16 @@ sigmadsl pack tests/fixtures/imports/pack_ok/main.sr --out pack_ok.zip --name pa
 sigmadsl validate --pack pack_ok.zip
 ```
 
+## Decision profiles (Sprint v1.0-A)
+
+Select a decision profile (`signal`, `intent`, or `risk`) when validating/running:
+
+```bash
+sigmadsl run --profile signal --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+See `docs/decision_profiles.md` for the allowlists and the stable decision output schema.
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):

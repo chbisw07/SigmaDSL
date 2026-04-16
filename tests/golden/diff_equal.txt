@@ -1,5 +1,5 @@
 Diff
 - equal: true
-- decisions_a: 5 (signal=4, annotation=1)
-- decisions_b: 5 (signal=4, annotation=1)
+- decisions_a: 5 (signal=4, annotation=1, intent=0, constraint=0)
+- decisions_b: 5 (signal=4, annotation=1, intent=0, constraint=0)
 - first_divergence: <none>

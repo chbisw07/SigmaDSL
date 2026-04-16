@@ -23,8 +23,11 @@ def explain_decision(result: EvalResult, decision_id: str) -> str | None:
     lines.append("Explain (decision)\n")
     lines.append(f"- id: {decision.id}\n")
     lines.append(f"- kind: {decision.kind}\n")
+    lines.append(f"- profile: {decision.profile.value}\n")
+    lines.append(f"- verb: {decision.verb}\n")
     lines.append(f"- rule: {decision.rule_name}\n")
     lines.append(f"- event: {decision.symbol} #{decision.event_index} @ {decision.timestamp}\n")
+    lines.append(f"- trace_ref: {json.dumps(decision.trace_ref, sort_keys=True)}\n")
     lines.append("\n")
 
     if emitting_rule is None or emitting_event is None:

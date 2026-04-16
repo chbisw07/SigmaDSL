@@ -253,3 +253,16 @@ sigmadsl validate --pack pack_ok.zip
 `validate --pack` performs pack integrity checks and then runs the same parse/import/type validation as `sigmadsl validate` on the embedded sources (guardrails remain in `sigmadsl lint`).
 
 See `docs/rule_pack_model.md` for the artifact layout and manifest fields.
+
+## Decision profiles + stable outputs (v1.0-A)
+
+v1.0-A introduces explicit decision profiles and a stable decision output schema.
+
+By default, the CLI runs in the `signal` profile. You can select a different profile explicitly:
+
+```bash
+sigmadsl validate path/to/rules.sr --profile intent
+sigmadsl run --input bars.csv --rules path/to/rules.sr --profile risk
+```
+
+See `docs/decision_profiles.md` for the implemented allowlists and the stable decision schema.

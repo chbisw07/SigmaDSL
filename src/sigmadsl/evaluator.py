@@ -6,7 +6,14 @@ from pathlib import Path
 
 from . import ast
 from .builtins import function_names, verb_signatures
-from .decisions import AnnotationDecision, Decision, SignalDecision
+from .decision_profiles import DecisionProfile, allowed_verbs as allowed_verbs_for_profile
+from .decisions import (
+    AnnotationDecision,
+    ConstraintDecision,
+    Decision,
+    IntentDecision,
+    SignalDecision,
+)
 from .expr import (
     Attribute,
     BinaryOp,
@@ -74,6 +81,7 @@ def evaluate_underlying(
     rules: list[CompiledRule],
     events: list[UnderlyingEvent],
     *,
+    profile: DecisionProfile = DecisionProfile.signal,
     engine_version: str = "v0.3-a",
 ) -> EvalResult:
     # Deterministic ordering: file path + source order + rule name.
@@ -131,8 +139,12 @@ def evaluate_underlying(
 
             emitted_ids: list[str] = []
             if selected_branch is not None and selected_kind is not None:
-                for then_line in selected_branch.actions:
+                allowed_verbs = allowed_verbs_for_profile(profile)
+                for action_index, then_line in enumerate(selected_branch.actions):
                     verb = then_line.call.name
+                    if verb not in allowed_verbs:
+                        # Fail closed; this should already be prevented by validate/lint.
+                        raise EvalError(f"Verb {verb!r} is not allowed for profile {profile.value!r}")
                     args_items = [
                         (a.name, _eval_value(a.value.node, ev, history, indicator_cache, indicators))
                         for a in then_line.call.args
@@ -142,6 +154,8 @@ def evaluate_underlying(
                     did = next_id()
                     emitted_ids.append(did)
                     action_traces.append(ActionTrace(verb=verb, args=args, decision_id=did))
+
+                    trace_ref = {"event_index": ev.index, "rule_name": rule.name, "action_index": action_index}
 
                     if verb == "emit_signal":
                         kind = args.get("kind")
@@ -157,10 +171,14 @@ def evaluate_underlying(
                             SignalDecision(
                                 id=did,
                                 kind="signal",
+                                profile=profile,
+                                verb=verb,
                                 rule_name=rule.name,
+                                context=rule.context,
                                 symbol=ev.symbol,
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
                                 signal_kind=kind,
                                 reason=reason,
                                 strength=strength,
@@ -174,11 +192,115 @@ def evaluate_underlying(
                             AnnotationDecision(
                                 id=did,
                                 kind="annotation",
+                                profile=profile,
+                                verb=verb,
                                 rule_name=rule.name,
+                                context=rule.context,
                                 symbol=ev.symbol,
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
                                 note=note,
+                            )
+                        )
+                    elif verb == "declare_intent":
+                        ik = args.get("kind")
+                        qty = args.get("quantity")
+                        pct = args.get("percent")
+                        reason = args.get("reason")
+                        if not isinstance(ik, str):
+                            raise EvalError("declare_intent.kind must be a string")
+                        if qty is not None and not isinstance(qty, Decimal):
+                            raise EvalError("declare_intent.quantity must be a number")
+                        if pct is not None and not isinstance(pct, Decimal):
+                            raise EvalError("declare_intent.percent must be a number")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("declare_intent.reason must be a string")
+                        decisions.append(
+                            IntentDecision(
+                                id=did,
+                                kind="intent",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                intent_action="declare",
+                                intent_kind=ik,
+                                quantity=qty,
+                                percent=pct,
+                                reason=reason,
+                            )
+                        )
+                    elif verb == "cancel_intent":
+                        reason = args.get("reason")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("cancel_intent.reason must be a string")
+                        decisions.append(
+                            IntentDecision(
+                                id=did,
+                                kind="intent",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                intent_action="cancel",
+                                intent_kind=None,
+                                quantity=None,
+                                percent=None,
+                                reason=reason,
+                            )
+                        )
+                    elif verb == "constrain_max_position":
+                        qty = args.get("quantity")
+                        reason = args.get("reason")
+                        if not isinstance(qty, Decimal):
+                            raise EvalError("constrain_max_position.quantity must be a number")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("constrain_max_position.reason must be a string")
+                        decisions.append(
+                            ConstraintDecision(
+                                id=did,
+                                kind="constraint",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                constraint_kind="max_position",
+                                reason=reason,
+                                quantity=qty,
+                            )
+                        )
+                    elif verb == "block":
+                        reason = args.get("reason")
+                        if not isinstance(reason, str):
+                            raise EvalError("block.reason must be a string")
+                        decisions.append(
+                            ConstraintDecision(
+                                id=did,
+                                kind="constraint",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                constraint_kind="block",
+                                reason=reason,
+                                quantity=None,
                             )
                         )
                     else:

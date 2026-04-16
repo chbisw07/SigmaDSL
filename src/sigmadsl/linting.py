@@ -5,11 +5,13 @@ from pathlib import Path
 
 from . import ast
 from .builtins import function_names, verb_signatures
+from .decision_profiles import DecisionProfile
 from .diagnostics import Diagnostic, Severity, diag
 from .expr import BinaryOp, Call, ExprNode, dotted_name
 from .lexer import Token, TokenKind, lex
 from .modules import load_modules_for_path, resolve_import_closure
 from .parser import parse_source
+from .profile_compliance import check_profile_compliance
 
 
 FORBIDDEN_LINE_STARTERS = {
@@ -21,6 +23,10 @@ FORBIDDEN_LINE_STARTERS = {
 
 
 def lint_paths(path: Path) -> list[Diagnostic]:
+    return lint_paths_with_profile(path, profile=DecisionProfile.signal)
+
+
+def lint_paths_with_profile(path: Path, *, profile: DecisionProfile) -> list[Diagnostic]:
     modules, index_diags, root = load_modules_for_path(path)
     if index_diags:
         return sorted(index_diags)
@@ -32,11 +38,11 @@ def lint_paths(path: Path) -> list[Diagnostic]:
 
     all_diags: list[Diagnostic] = []
     for m in closure:
-        all_diags.extend(lint_text(m.text, file=m.path))
+        all_diags.extend(lint_text(m.text, profile=profile, file=m.path))
     return sorted(all_diags)
 
 
-def lint_text(text: str, *, file: Path | None = None) -> list[Diagnostic]:
+def lint_text(text: str, *, profile: DecisionProfile, file: Path | None = None) -> list[Diagnostic]:
     tokens, lex_diags = lex(text, file=file)
     sf, parse_diags = parse_source(text, file=file)
 
@@ -50,7 +56,7 @@ def lint_text(text: str, *, file: Path | None = None) -> list[Diagnostic]:
 
     if sf is not None:
         diags.extend(_lint_forbidden_expr_constructs(sf, file=file))
-        diags.extend(_lint_profile_compliance(sf, file=file))
+        diags.extend(check_profile_compliance(sf, profile=profile, file=file))
 
     return sorted(diags)
 
@@ -101,39 +107,6 @@ def _lint_line(tokens: list[Token], *, file: Path | None) -> list[Diagnostic]:
         ]
 
     return []
-
-
-def _lint_profile_compliance(sf: ast.SourceFile, *, file: Path | None) -> list[Diagnostic]:
-    """
-    v0.2-B: only the `signal` profile is allowed.
-
-    Since there is no explicit profile syntax yet, the file is treated as `signal`,
-    and all verbs must be within the signal verb allowlist.
-    """
-
-    diags: list[Diagnostic] = []
-    allowed_verbs = set(verb_signatures().keys())
-
-    for rule in sf.rules:
-        for branch in rule.branches:
-            for then_line in branch.actions:
-                name = then_line.call.name
-                if name not in allowed_verbs:
-                    diags.append(
-                        diag(
-                            code="SD410",
-                            severity=Severity.error,
-                            message=(
-                                "Profile violation: only 'signal' profile is supported in v0.2; "
-                                f"verb {name!r} is not allowed"
-                            ),
-                            file=file,
-                            line=then_line.call.span.line,
-                            column=then_line.call.span.column,
-                        )
-                    )
-
-    return diags
 
 
 def _lint_forbidden_expr_constructs(sf: ast.SourceFile, *, file: Path | None) -> list[Diagnostic]:

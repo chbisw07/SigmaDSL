@@ -79,6 +79,36 @@ def verb_signatures() -> dict[str, VerbSignature]:
             required={"note": STRING},
             optional={},
         ),
+        # v1.0-A: intent profile verbs (outputs only; no planning semantics yet).
+        "declare_intent": VerbSignature(
+            name="declare_intent",
+            required={"kind": STRING},
+            optional={
+                "quantity": QUANTITY,
+                "percent": PERCENT,
+                "reason": STRING,
+            },
+        ),
+        "cancel_intent": VerbSignature(
+            name="cancel_intent",
+            required={},
+            optional={
+                "reason": STRING,
+            },
+        ),
+        # v1.0-A: risk profile verbs (constraint outputs only; no enforcement semantics yet).
+        "constrain_max_position": VerbSignature(
+            name="constrain_max_position",
+            required={"quantity": QUANTITY},
+            optional={
+                "reason": STRING,
+            },
+        ),
+        "block": VerbSignature(
+            name="block",
+            required={"reason": STRING},
+            optional={},
+        ),
     }
 
 

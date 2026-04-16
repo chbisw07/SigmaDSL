@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
+from .decision_profiles import DECISION_SCHEMA, DECISION_SCHEMA_VERSION
 from .runtime_models import Bar, UnderlyingEvent, dec, dec_str
 
 
 RUNLOG_SCHEMA = "sigmadsl.runlog"
-RUNLOG_SCHEMA_VERSION = "0.5-a"
-SUPPORTED_RUNLOG_SCHEMA_VERSIONS = ("0.4-a", "0.5-a")
+RUNLOG_SCHEMA_VERSION = "1.0-a"
+SUPPORTED_RUNLOG_SCHEMA_VERSIONS = ("0.4-a", "0.5-a", "1.0-a")
 
 
 @dataclass(frozen=True)
@@ -125,6 +126,7 @@ class RunLog:
     schema: str
     schema_version: str
     engine_version: str
+    profile: str | None
     rules: tuple[RuleSource, ...]
     input_csv: CsvSourceMeta
     events: tuple[UnderlyingEvent, ...]
@@ -135,6 +137,8 @@ class RunLog:
             "schema": self.schema,
             "schema_version": self.schema_version,
             "engine_version": self.engine_version,
+            "profile": self.profile,
+            "decision_schema": {"schema": DECISION_SCHEMA, "schema_version": DECISION_SCHEMA_VERSION},
             "rules": {"files": [r.to_dict() for r in self.rules]},
             "input": {
                 "csv": self.input_csv.to_dict(),
@@ -189,6 +193,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
 
     try:
         engine_version = str(d["engine_version"])
+        profile = d.get("profile")
         rules_files = d["rules"]["files"]
         input_csv_d = d["input"]["csv"]
         events_d = d["input"]["events"]
@@ -196,7 +201,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
         return None, [diag(code="SD542", severity=Severity.error, message=f"Missing required log fields: {e}", file=path)]
 
     indicators_meta: IndicatorsMeta | None = None
-    if schema_version == "0.5-a":
+    if "indicators" in d:
         try:
             ind = d["indicators"]
             indicators_meta = IndicatorsMeta(
@@ -248,6 +253,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
             schema=RUNLOG_SCHEMA,
             schema_version=str(schema_version),
             engine_version=engine_version,
+            profile=str(profile) if profile is not None else None,
             rules=tuple(rules),
             input_csv=csv_meta,
             events=tuple(events),

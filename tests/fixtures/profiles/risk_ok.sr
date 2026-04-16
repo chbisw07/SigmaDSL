@@ -1,0 +1,5 @@
+rule "EQ: Risk Demo" in underlying:
+    when true:
+        then constrain_max_position(quantity=250, reason="cap_position")
+        then block(reason="demo_block")
+
