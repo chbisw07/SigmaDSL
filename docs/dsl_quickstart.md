@@ -235,3 +235,21 @@ rule "Main" in underlying:
 ```
 
 See `docs/rule_library_layout.md` for the pack root rules, module naming, and cycle behavior.
+
+## Packaging (v0.6-B)
+
+Create a local bundle:
+
+```bash
+sigmadsl pack tests/fixtures/imports/pack_ok/main.sr --out pack_ok.zip --name pack_ok --version 0.1.0
+```
+
+Validate a bundle:
+
+```bash
+sigmadsl validate --pack pack_ok.zip
+```
+
+`validate --pack` performs pack integrity checks and then runs the same parse/import/type validation as `sigmadsl validate` on the embedded sources (guardrails remain in `sigmadsl lint`).
+
+See `docs/rule_pack_model.md` for the artifact layout and manifest fields.

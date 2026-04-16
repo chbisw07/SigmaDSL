@@ -18,6 +18,7 @@ Updated sections in this snapshot:
 - Chapter 11 (imports/module syntax concretized)
 - Chapter 23 (rule library layout model concretized)
 - Chapter 21 (CLI and validation flow: import closure and graph validation)
+- Chapter 23 (pack manifest + local packaging semantics)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -1455,6 +1456,11 @@ v0.6-A adds deterministic imports and module layout:
 - `validate`, `lint`, `run`, and `profile` resolve the deterministic import closure from the entry path
 - missing modules, ambiguous modules, and cycles are rejected at compile time
 
+v0.6-B adds local packaging:
+
+- `pack path --out pack.zip --name NAME --version X.Y.Z` creates a deterministic bundle
+- `validate --pack pack.zip` verifies manifest + hashes + embedded source validity
+
 ## 21.2 Diagnostics requirements
 
 **Status: CURRENTLY DECIDED**  
@@ -1507,6 +1513,40 @@ v0.6-A establishes:
 Notes:
 - v0.6-A does **not** ship pack manifests or bundling; it only provides the deterministic library/module substrate.
 - v0.6-B will add pack metadata (name/version/compatibility/hashes) and a bundle artifact (`sigmadsl pack`).
+
+## 23.3 Local pack artifact (v0.6-B)
+
+**Status: CURRENTLY DECIDED (v0.6-B implementation)**  
+Rationale: A local bundle format is required before any governance/publishing can be meaningful.  
+Implications: Pack contents and manifest must be deterministic; integrity must be verifiable.
+
+v0.6-B introduces a deterministic local pack artifact:
+
+- container: zip file (stored; stable ordering)
+- contents:
+  - `manifest.json`
+  - `rules/...` (bundled `.sr` sources for the import closure)
+
+Manifest requirements (v0.6-B):
+- schema identifiers:
+  - `schema = "sigmadsl.pack"`
+  - `schema_version = "0.6-b"`
+- metadata:
+  - `name`, `version`
+  - `compat.dsl_spec` (e.g., `dsl_v0.6`)
+- closure contents:
+  - `modules[]` mapping `{name, path}`
+  - `files[]` list `{path, sha256, bytes_len}` for integrity verification
+
+Validation requirements:
+- `sigmadsl validate --pack <file>` must:
+  - validate manifest schema/version
+  - verify file presence and sha256 hashes
+  - validate embedded sources (parse/type + import graph)
+  - fail closed on corruption/tampering
+
+Note:
+- guardrail/profile checks remain in `sigmadsl lint` (no `lint --pack` in v0.6-B)
 
 ---
 

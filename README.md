@@ -108,6 +108,15 @@ sigmadsl diff run_a.json run_b.json
 
 See `docs/debugging_determinism.md` for the v0.4 replay+diff+explain workflow.
 
+## Pack (Sprint 0.6-B)
+
+Create a local rule pack bundle:
+
+```bash
+sigmadsl pack tests/fixtures/imports/pack_ok/main.sr --out pack_ok.zip --name pack_ok --version 0.1.0
+sigmadsl validate --pack pack_ok.zip
+```
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):
@@ -124,4 +133,4 @@ Type checking is implemented in **Sprint 0.2-A** for a minimal set of types/oper
 
 v0.3-A introduces a minimal deterministic evaluator + trace as a library surface (see `tests/test_evaluator_trace.py`).
 
-Not implemented yet (intentionally): imports/packaging, broad indicator catalog, options/chain, planning/risk, multi-symbol evaluation.
+Not implemented yet (intentionally): publish/install workflows, registry support, broad indicator catalog, options/chain, planning/risk, multi-symbol evaluation.

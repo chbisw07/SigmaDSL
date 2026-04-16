@@ -197,7 +197,7 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
             if t.kind != TokenKind.THEN:
                 # Extra helpful diagnostics for forbidden statement starters / assignments.
                 if t.kind == TokenKind.IMPORT:
-                    add("SD204", "Imports are only allowed at the top level", t)
+                    add("SD221", "Imports are only allowed at the top level", t)
                 if t.kind == TokenKind.IDENT and (t.value or "") in FORBIDDEN_STMT_STARTERS:
                     add("SD204", f"Forbidden construct in SigmaDSL: {t.value!r}", t)
                 elif t.kind == TokenKind.IDENT and cur.peek(1).kind == TokenKind.EQ:

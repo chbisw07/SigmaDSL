@@ -8,6 +8,7 @@ from .diagnostics import Diagnostic
 from .diffing import diff_run_logs
 from .linting import lint_paths
 from .profile import profile_paths
+from .packaging import create_pack, validate_pack
 from .explain import explain_decision, explain_rule_at_event
 from .runner import (
     decision_jsonl_lines,
@@ -42,12 +43,26 @@ def _format_diag(diag: Diagnostic) -> str:
 
 
 @app.command()
-def validate(path: Path = typer.Argument(..., exists=True, readable=True)):
+def validate(
+    path: Path | None = typer.Argument(None),
+    pack: Path | None = typer.Option(None, "--pack", exists=True, readable=True, help="Validate a packaged rule pack"),
+):
     """
     Validate one SigmaDSL source file (or directory of .sr files).
     """
 
-    diags: list[Diagnostic] = validate_paths(path)
+    if (path is None and pack is None) or (path is not None and pack is not None):
+        typer.echo("validate requires either a path argument or --pack", err=True)
+        raise typer.Exit(code=2)
+
+    if pack is not None:
+        diags = validate_pack(pack)
+    else:
+        assert path is not None
+        if not path.exists() or not path.is_dir() and not path.is_file():
+            typer.echo("Invalid path", err=True)
+            raise typer.Exit(code=2)
+        diags = validate_paths(path)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -234,3 +249,23 @@ def profile(
     inds = o["indicators"]
     typer.echo(f"- indicator_registry_version: {inds['registry_version']}")
     typer.echo(f"- indicators_referenced: {', '.join(inds['referenced']) or '<none>'}")
+
+
+@app.command()
+def pack(
+    path: Path = typer.Argument(..., exists=True, readable=True),
+    out: Path = typer.Option(..., "--out", help="Output pack file path"),
+    name: str | None = typer.Option(None, "--name", help="Pack name (default: derived from path)"),
+    version: str = typer.Option("0.0.0", "--version", help="Pack version string"),
+):
+    """
+    Package a rule pack into a deterministic local bundle (Sprint 0.6-B).
+    """
+
+    pack_name = name or path.stem
+    diags = create_pack(path=path, out=out, name=pack_name, version=version)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=1)
+    typer.echo(f"PACKED {pack_name}@{version} -> {out}")

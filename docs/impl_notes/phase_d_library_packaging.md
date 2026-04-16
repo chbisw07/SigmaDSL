@@ -64,13 +64,13 @@ Dependency validation:
 Run the full test suite:
 
 ```bash
-pytest
+.venv/bin/python -m pytest
 ```
 
 Run only import-related tests:
 
 ```bash
-pytest -k imports
+.venv/bin/python -m pytest -k imports
 ```
 
 Manual demo:
@@ -86,3 +86,59 @@ sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/im
 - no publish/install/registry workflows
 - no module-level metadata headers (will land with packaging)
 
+---
+
+## Sprint 0.6-B — Rule pack packaging
+
+### Sprint goal
+
+Add a local, deterministic packaging artifact so rule libraries can be bundled and verified:
+
+- deterministic pack artifact format
+- manifest model with name/version/compatibility + hashes
+- `sigmadsl pack` command
+- `sigmadsl validate --pack` command
+- integrity/tamper detection tests
+
+### Design choices (v0.6-B)
+
+- container: deterministic zip (stored; stable ordering; fixed timestamps)
+- contents:
+  - `manifest.json`
+  - `rules/...` (bundled `.sr` files for the import closure)
+- hashing:
+  - per-file sha256 recorded in `manifest.json`
+  - validation fails closed on missing files or hash mismatches
+- source validity:
+  - `sigmadsl pack` requires syntax-clean sources (needed to compute an import closure deterministically)
+  - type checking runs in `sigmadsl validate --pack` (matches `sigmadsl validate` semantics)
+- compatibility:
+  - `compat.dsl_spec` recorded (simple marker in v0.6-B)
+
+### What was implemented
+
+- Pack creation + validation:
+  - `src/sigmadsl/packaging.py`
+  - `sigmadsl pack ...`
+  - `sigmadsl validate --pack ...`
+- Tests:
+  - `tests/test_packaging.py` creates packs in temp dirs and validates determinism/tamper detection
+
+### Commands to run
+
+Create a pack:
+
+```bash
+sigmadsl pack tests/fixtures/imports/pack_ok/main.sr --out pack_ok.zip --name pack_ok --version 0.1.0
+```
+
+Validate it:
+
+```bash
+sigmadsl validate --pack pack_ok.zip
+```
+
+### Known limitations (intentionally deferred)
+
+- no signing/trust infrastructure
+- no publish/install workflows or registries

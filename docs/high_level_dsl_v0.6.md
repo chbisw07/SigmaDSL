@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v0.6
 
-Status: Implemented (deterministic imports + module layout).  
-Scope: **Sprint 0.6-A** (“Imports + module layout”).
+Status: Implemented (deterministic imports + local packaging).  
+Scope: **Sprint 0.6-A** (“Imports + module layout”) + **Sprint 0.6-B** (“Rule pack packaging”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -45,6 +45,17 @@ Resolution:
 
 See `docs/rule_library_layout.md` for the full layout rules and examples.
 
+## What v0.6 adds (Sprint 0.6-B)
+
+v0.6-B adds local rule pack packaging:
+
+- a deterministic pack artifact (zip container)
+- a `manifest.json` containing metadata + hashes for integrity checks
+- `sigmadsl pack` to create a pack from an entry path (import closure)
+- `sigmadsl validate --pack <file>` to validate pack structure, hashes, imports, and type-checked embedded rules
+
+See `docs/rule_pack_model.md` for details.
+
 ## CLI behavior (v0.6-A)
 
 `sigmadsl validate`, `sigmadsl lint`, `sigmadsl run`, and `sigmadsl profile` now:
@@ -55,7 +66,5 @@ See `docs/rule_library_layout.md` for the full layout rules and examples.
 
 ## Known limitations / deferred items
 
-- packaging (`sigmadsl pack`) is Sprint 0.6-B
 - no publish/install/registry workflows
 - module metadata headers are deferred until packaging exists
-
