@@ -16,6 +16,7 @@ This repository currently implements:
 - `docs/high_level_dsl_v0.3.md` (v0.3 snapshot: deterministic evaluator + trace)
 - `docs/high_level_dsl_v0.4.md` (v0.4 snapshot: event log + replay)
 - `docs/high_level_dsl_v0.5.md` (v0.5 snapshot: indicator registry + deterministic windows)
+- `docs/high_level_dsl_v0.6.md` (v0.6 snapshot: deterministic imports + module layout)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
 spec-level copy-forward updates beyond `docs/DSL_v0.md`.
@@ -24,6 +25,7 @@ Current spec snapshot docs:
 - `docs/dsl_v0.3.md` (v0.3-A: deterministic evaluation + trace chapters concretized)
 - `docs/dsl_v0.4.md` (v0.4-A: run log + replay semantics concretized)
 - `docs/dsl_v0.5.md` (v0.5-A: indicator + window semantics concretized)
+- `docs/dsl_v0.6.md` (v0.6-A: imports + library layout semantics concretized)
 
 ## Install (dev)
 

@@ -1,0 +1,4 @@
+rule "Util: Always annotate" in underlying:
+    when true:
+        then annotate(note="util")
+

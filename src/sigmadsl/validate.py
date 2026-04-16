@@ -3,21 +3,23 @@ from __future__ import annotations
 from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
-from .paths import discover_sr_files
-from .parser import parse_source
+from .modules import load_modules_for_path, resolve_import_closure
 from .typechecker import typecheck_source_file
 
 
 def validate_paths(path: Path) -> list[Diagnostic]:
-    files = discover_sr_files(path)
-    if not files:
-        return [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
+    modules, index_diags, root = load_modules_for_path(path)
+    if index_diags:
+        return sorted(index_diags)
+
+    entry_paths = [path] if path.is_file() else [m.path for m in modules]
+    closure, import_diags = resolve_import_closure(root=root, modules=modules, entry_paths=entry_paths)
+    if import_diags:
+        return sorted(import_diags)
 
     all_diags: list[Diagnostic] = []
-    for file in files:
-        text = file.read_text(encoding="utf-8")
-        source_file, parse_diags = parse_source(text, file=file)
-        all_diags.extend(parse_diags)
-        if source_file is not None and not parse_diags:
-            all_diags.extend(typecheck_source_file(source_file))
+    for m in closure:
+        all_diags.extend(m.parse_diags)
+        if m.source_file is not None and not m.parse_diags:
+            all_diags.extend(typecheck_source_file(m.source_file))
     return sorted(all_diags)

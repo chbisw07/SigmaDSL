@@ -1,0 +1,24 @@
+{
+  "contexts": [
+    "underlying"
+  ],
+  "files": [
+    "tests/fixtures/imports/pack_ok/lib/util.sr",
+    "tests/fixtures/imports/pack_ok/main.sr"
+  ],
+  "functions": [],
+  "indicators": {
+    "pinned": [
+      "atr@1",
+      "ema@1",
+      "rsi@1",
+      "vwap@1"
+    ],
+    "referenced": [],
+    "registry_version": "0.5-a"
+  },
+  "rule_count": 2,
+  "verbs": [
+    "annotate"
+  ]
+}

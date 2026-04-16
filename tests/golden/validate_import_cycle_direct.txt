@@ -1,0 +1,1 @@
+tests/fixtures/imports/pack_cycle_direct/a.sr:1:1 SD603 error: Import cycle detected: a -> b -> a

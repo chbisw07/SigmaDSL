@@ -1,0 +1,6 @@
+import lib.util
+
+rule "Main: Always annotate" in underlying:
+    when true:
+        then annotate(note="main")
+

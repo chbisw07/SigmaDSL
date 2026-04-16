@@ -1,0 +1,1 @@
+tests/fixtures/imports/pack_missing/main.sr:1:1 SD601 error: Import target not found: 'no.such.module'

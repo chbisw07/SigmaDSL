@@ -1,0 +1,6 @@
+import no.such.module
+
+rule "Missing import" in underlying:
+    when true:
+        then annotate(note="x")
+

@@ -196,6 +196,8 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
                 break
             if t.kind != TokenKind.THEN:
                 # Extra helpful diagnostics for forbidden statement starters / assignments.
+                if t.kind == TokenKind.IMPORT:
+                    add("SD204", "Imports are only allowed at the top level", t)
                 if t.kind == TokenKind.IDENT and (t.value or "") in FORBIDDEN_STMT_STARTERS:
                     add("SD204", f"Forbidden construct in SigmaDSL: {t.value!r}", t)
                 elif t.kind == TokenKind.IDENT and cur.peek(1).kind == TokenKind.EQ:
@@ -290,11 +292,56 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
             span=ast.SourceSpan(line=rule_tok.line, column=rule_tok.column),
         )
 
+    def parse_import_decl() -> ast.ImportDecl | None:
+        """
+        v0.6-A: `import foo.bar` only (no aliasing, no selective imports).
+        """
+
+        import_tok = cur.advance()  # 'import'
+        parts: list[str] = []
+
+        t = cur.peek()
+        if t.kind != TokenKind.IDENT:
+            add("SD220", "Expected module name after 'import' (e.g., import foo.bar)", t)
+            skip_to_line_end()
+            return None
+
+        while True:
+            seg = cur.peek()
+            if seg.kind != TokenKind.IDENT:
+                break
+            parts.append(seg.value or "")
+            cur.advance()
+            if cur.match(TokenKind.DOT):
+                # require another ident after dot
+                if cur.peek().kind != TokenKind.IDENT:
+                    add("SD220", "Expected identifier after '.' in import module path", cur.peek())
+                    skip_to_line_end()
+                    return None
+                continue
+            break
+
+        expect(TokenKind.NEWLINE, "SD220", "Expected end of line after import declaration")
+
+        module = ".".join(p for p in parts if p)
+        if not module:
+            add("SD220", "Import module path cannot be empty", import_tok)
+            return None
+
+        return ast.ImportDecl(module=module, span=ast.SourceSpan(line=import_tok.line, column=import_tok.column))
+
+    imports: list[ast.ImportDecl] = []
     rules: list[ast.Rule] = []
 
     consume_newlines()
     while cur.peek().kind != TokenKind.EOF:
         t = cur.peek()
+        if t.kind == TokenKind.IMPORT:
+            decl = parse_import_decl()
+            if decl is not None:
+                imports.append(decl)
+            consume_newlines()
+            continue
         if t.kind == TokenKind.RULE:
             rule = parse_rule_block()
             if rule is not None:
@@ -306,4 +353,4 @@ def parse_source(source: str, *, file: Path | None = None) -> tuple[ast.SourceFi
         skip_to_line_end()
         consume_newlines()
 
-    return ast.SourceFile(rules=tuple(rules), path=file), sorted(diags)
+    return ast.SourceFile(imports=tuple(imports), rules=tuple(rules), path=file), sorted(diags)

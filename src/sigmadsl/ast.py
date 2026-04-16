@@ -54,5 +54,18 @@ class Rule:
 
 @dataclass(frozen=True)
 class SourceFile:
+    imports: tuple["ImportDecl", ...]
     rules: tuple[Rule, ...]
     path: Path | None = None
+
+
+@dataclass(frozen=True)
+class ImportDecl:
+    """
+    Deterministic module import declaration.
+
+    v0.6-A: `import foo.bar` maps to `<pack_root>/foo/bar.sr`.
+    """
+
+    module: str
+    span: SourceSpan

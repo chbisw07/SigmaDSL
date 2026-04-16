@@ -1,0 +1,1 @@
+tests/fixtures/imports/pack_duplicate/foo.sr:1:1 SD602 error: Duplicate module name mapping for 'foo': 'tests/fixtures/imports/pack_duplicate/foo/__init__.sr' and 'tests/fixtures/imports/pack_duplicate/foo.sr'

@@ -32,6 +32,7 @@ class TokenKind(str, Enum):
     NOT = "NOT"
     TRUE = "TRUE"
     FALSE = "FALSE"
+    IMPORT = "IMPORT"
 
     # punctuation / operators
     COLON = ":"
@@ -64,6 +65,7 @@ KEYWORDS: dict[str, TokenKind] = {
     "not": TokenKind.NOT,
     "true": TokenKind.TRUE,
     "false": TokenKind.FALSE,
+    "import": TokenKind.IMPORT,
 }
 
 
@@ -259,4 +261,3 @@ def lex(source: str, *, file: Path | None = None) -> tuple[list[Token], list[Dia
 
     emit(TokenKind.EOF, None, len(lines) + 1, 1)
     return tokens, diags
-

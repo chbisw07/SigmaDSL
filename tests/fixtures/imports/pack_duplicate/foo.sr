@@ -1,0 +1,4 @@
+rule "Foo" in underlying:
+    when true:
+        then annotate(note="foo")
+

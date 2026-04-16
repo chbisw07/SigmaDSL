@@ -7,8 +7,8 @@ from .diagnostics import Diagnostic, Severity, diag
 from .evaluator import CompiledRule, EvalError, EvalResult, compile_source_file, evaluate_underlying
 from .indicators import INDICATOR_REGISTRY_VERSION, pinned_indicator_keys, referenced_indicator_keys
 from .linting import lint_text
+from .modules import load_modules_for_path, resolve_import_closure
 from .parser import parse_source
-from .paths import discover_sr_files
 from .runlog import (
     RUNLOG_SCHEMA,
     RUNLOG_SCHEMA_VERSION,
@@ -29,31 +29,34 @@ def load_compiled_rules(path: Path) -> tuple[list[CompiledRule], list[Diagnostic
 
 
 def load_compiled_rules_with_sources(path: Path) -> tuple[list[CompiledRule], list[RuleSource], tuple[str, ...], list[Diagnostic]]:
-    files = discover_sr_files(path)
-    if not files:
-        return [], [], (), [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
+    modules, index_diags, root = load_modules_for_path(path)
+    if index_diags:
+        return [], [], (), sorted(index_diags)
+
+    entry_paths = [path] if path.is_file() else [m.path for m in modules]
+    closure, import_diags = resolve_import_closure(root=root, modules=modules, entry_paths=entry_paths)
+    if import_diags:
+        return [], [], (), sorted(import_diags)
 
     rules: list[CompiledRule] = []
     sources: list[RuleSource] = []
     indicator_keys: set[str] = set()
     diags: list[Diagnostic] = []
 
-    for file in files:
-        text = file.read_text(encoding="utf-8")
-        sources.append(RuleSource(path=str(file), sha256=sha256_text(text), text=text))
+    for m in closure:
+        sources.append(RuleSource(path=str(m.path), sha256=sha256_text(m.text), text=m.text))
 
-        sf, parse_diags = parse_source(text, file=file)
-        diags.extend(parse_diags)
-        if sf is None or parse_diags:
+        diags.extend(m.parse_diags)
+        if m.source_file is None or m.parse_diags:
             continue
 
-        diags.extend(typecheck_source_file(sf))
-        diags.extend(lint_text(text, file=file))
+        diags.extend(typecheck_source_file(m.source_file))
+        diags.extend(lint_text(m.text, file=m.path))
 
-        # Only include rules from files with no diagnostics to keep execution safe.
-        if not [d for d in diags if d.location.file == file]:
-            rules.extend(compile_source_file(sf))
-            indicator_keys.update(referenced_indicator_keys(sf))
+        # Only include rules from modules with no diagnostics to keep execution safe.
+        if not [d for d in diags if d.location.file == m.path]:
+            rules.extend(compile_source_file(m.source_file))
+            indicator_keys.update(referenced_indicator_keys(m.source_file))
 
     return rules, sources, tuple(sorted(indicator_keys)), sorted(diags)
 

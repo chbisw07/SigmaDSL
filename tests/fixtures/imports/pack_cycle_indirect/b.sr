@@ -1,0 +1,6 @@
+import c
+
+rule "B" in underlying:
+    when true:
+        then annotate(note="b")
+

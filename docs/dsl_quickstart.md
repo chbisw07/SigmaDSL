@@ -221,3 +221,17 @@ diff -u examples/equity_indicator_rules/expected/run_trend_following.jsonl out.j
 ```
 
 See `docs/indicator_cookbook.md` for worked patterns and runnable commands.
+
+## Imports + library layout (v0.6-A)
+
+v0.6-A introduces deterministic rule-module imports:
+
+```sr
+import lib.util
+
+rule "Main" in underlying:
+    when true:
+        then annotate(note="ok")
+```
+
+See `docs/rule_library_layout.md` for the pack root rules, module naming, and cycle behavior.

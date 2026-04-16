@@ -8,28 +8,31 @@ from .builtins import function_names, verb_signatures
 from .diagnostics import Diagnostic, Severity, diag
 from .expr import BinaryOp, Call, ExprNode, dotted_name
 from .lexer import Token, TokenKind, lex
+from .modules import load_modules_for_path, resolve_import_closure
 from .parser import parse_source
-from .paths import discover_sr_files
 
 
 FORBIDDEN_LINE_STARTERS = {
     "for": ("SD401", "Loops are not allowed in SigmaDSL"),
     "while": ("SD401", "Loops are not allowed in SigmaDSL"),
     "def": ("SD402", "Function definitions are not allowed in SigmaDSL"),
-    "import": ("SD405", "Imports are not allowed in SigmaDSL"),
     "from": ("SD405", "Imports are not allowed in SigmaDSL"),
 }
 
 
 def lint_paths(path: Path) -> list[Diagnostic]:
-    files = discover_sr_files(path)
-    if not files:
-        return [diag(code="SD000", message="No .sr files found", file=path, severity=Severity.error)]
+    modules, index_diags, root = load_modules_for_path(path)
+    if index_diags:
+        return sorted(index_diags)
+
+    entry_paths = [path] if path.is_file() else [m.path for m in modules]
+    closure, import_diags = resolve_import_closure(root=root, modules=modules, entry_paths=entry_paths)
+    if import_diags:
+        return sorted(import_diags)
 
     all_diags: list[Diagnostic] = []
-    for file in files:
-        text = file.read_text(encoding="utf-8")
-        all_diags.extend(lint_text(text, file=file))
+    for m in closure:
+        all_diags.extend(lint_text(m.text, file=m.path))
     return sorted(all_diags)
 
 
@@ -204,4 +207,3 @@ def _lint_forbidden_expr_constructs(sf: ast.SourceFile, *, file: Path | None) ->
                     walk(arg.value.node)
 
     return diags
-
