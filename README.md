@@ -54,6 +54,20 @@ Starter sample pack:
 sigmadsl validate examples/equity_min_rules/
 ```
 
+## Run (Sprint 0.3-B)
+
+Run a rules file/directory against a minimal bars CSV (single symbol):
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+Explain a single decision:
+
+```bash
+sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):

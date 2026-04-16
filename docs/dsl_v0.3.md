@@ -17,6 +17,7 @@ to reflect the implemented Sprint 0.3-A evaluator + trace behavior.
 Updated sections in this snapshot:
 - Chapter 13 (deterministic evaluation algorithm + trace schema)
 - Section 14.4.1 (`underlying` context object model)
+- Section 15.4 (decision JSON output shape for v0.3-B runner)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -1087,6 +1088,37 @@ Minimum fields every decision should carry:
 - `kind` (decision kind)
 - `reason` (machine-friendly reason code)
 - `trace_ref` (pointer/ID into trace data; PROVISIONAL)
+
+### 15.4.1 v0.3-B runner output (`decisions.jsonl`)
+
+**Status: CURRENTLY DECIDED (v0.3-B implementation)**  
+Rationale: The CLI runner needs a stable, minimal output for fixtures and integration scaffolding.  
+Implications: Treat this as a v0.3 boundary contract; add fields conservatively and version later.
+
+`sigmadsl run` emits decisions as JSON lines (one decision per line) in deterministic order.
+
+Current v0.3-B decision JSON fields (minimum set):
+
+- `id`: decision id (v0.3 uses sequential IDs per run: `D0001`, `D0002`, …)
+- `kind`: `"signal"` or `"annotation"` (v0.3 supports signal-profile outputs only)
+- `verb`: `"emit_signal"` or `"annotate"` (explicit effect name)
+- `rule_name`
+- `symbol`
+- `timestamp` (bar timestamp string; treated as an opaque identity in v0.3)
+- `event_index` (0..N-1 within the evaluated series)
+
+Verb-specific fields:
+
+- for `emit_signal` decisions:
+  - `signal_kind` (string)
+  - `reason` (string or null)
+  - `strength` (decimal string or null)
+- for `annotate` decisions:
+  - `note` (string)
+
+Notes:
+- Trace is produced internally in v0.3 but is not emitted as a separate persisted log yet (replay logging is v0.4).
+- Multi-symbol series evaluation and decision ID stability across merges are deferred.
 
 ## 15.5 Idempotency and merging rules (effect semantics)
 

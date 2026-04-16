@@ -101,3 +101,68 @@ Not implemented in Sprint 0.3-A (by design):
 - option/chain contexts, intent/plan/risk semantics (v1.x / v2.0)
 - missing/unknown three-valued logic (still TBD in `docs/DSL_v0.md`)
 
+---
+
+## Sprint 0.3-B — CLI run + JSON output
+
+### Sprint goal
+
+Turn the v0.3-A evaluator into a user-runnable product slice:
+
+- add `sigmadsl run --input bars.csv --rules path/` emitting deterministic JSON decision outputs
+- add `sigmadsl explain --decision-id ...` to inspect why a decision fired (basic)
+- add end-to-end fixtures and CLI goldens (CSV → expected JSON/trace output)
+
+### What was implemented
+
+- **CSV loader (strict, sprint-scoped)**: `src/sigmadsl/csv_input.py`
+  - required columns: `symbol,timestamp,open,high,low,close,volume`
+  - optional columns: `underlying_return_5m,data_is_fresh,session_is_regular`
+  - v0.3-B supports **single-symbol series only** (fails deterministically otherwise)
+- **Runner pipeline**: `src/sigmadsl/runner.py`
+  - loads rule files (`*.sr`) from a file or directory path (sorted)
+  - runs parse → typecheck → lint before evaluation (fail-closed)
+  - runs v0.3-A evaluator and returns decisions + trace
+  - provides stable JSONL serialization for decisions
+  - provides a basic explain formatter for one decision
+- **CLI commands**: `src/sigmadsl/cli.py`
+  - `sigmadsl run --input ... --rules ... [--format jsonl|json]`
+  - `sigmadsl explain --decision-id ... --input ... --rules ...`
+
+### Output format choices (v0.3-B)
+
+- Default `run` output is **JSONL** (one decision per line), suitable for piping:
+  - deterministic decision ordering (event → rule → action)
+  - stable key ordering in each JSON object (`sort_keys=True`)
+- `--format json` emits a single JSON array of decisions (decisions-only; trace is internal for now)
+
+### Tests + fixtures
+
+- CSV fixtures: `tests/fixtures/run/*.csv`
+- End-to-end CLI goldens:
+  - `tests/golden/run_*.jsonl`
+  - `tests/golden/explain_d0003.txt`
+- Tests:
+  - `tests/test_cli_run.py`
+  - `tests/test_cli_explain.py`
+
+### Commands to run
+
+Run the full test suite:
+
+```bash
+pytest
+```
+
+Manual demo (stdout):
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+### Known limitations (intentionally deferred)
+
+- multi-symbol CSV evaluation (per-symbol histories + deterministic merge) is deferred
+- trace export to a separate file/log is deferred (replay logging is v0.4)
+- replay/diff, indicators, imports/packaging, options/chain, planning/risk remain out of scope

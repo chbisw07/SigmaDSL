@@ -1,0 +1,5 @@
+{"event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100", "rule_name": "EQ: Close GT 100", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "verb": "annotate"}
+{"event_index": 1, "id": "D0002", "kind": "signal", "reason": "close_gt_100", "rule_name": "EQ: Close GT 100", "signal_kind": "GT100", "strength": "0.7", "symbol": "TCS", "timestamp": "2026-01-01T09:20:00", "verb": "emit_signal"}
+{"event_index": 1, "id": "D0003", "kind": "signal", "reason": "close_gt_prior_high", "rule_name": "EQ: Breakout", "signal_kind": "BREAKOUT", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:20:00", "verb": "emit_signal"}
+{"event_index": 2, "id": "D0004", "kind": "signal", "reason": "close_gt_100", "rule_name": "EQ: Close GT 100", "signal_kind": "GT100", "strength": "0.7", "symbol": "TCS", "timestamp": "2026-01-01T09:25:00", "verb": "emit_signal"}
+{"event_index": 2, "id": "D0005", "kind": "signal", "reason": "close_gt_prior_high", "rule_name": "EQ: Breakout", "signal_kind": "BREAKOUT", "strength": null, "symbol": "TCS", "timestamp": "2026-01-01T09:25:00", "verb": "emit_signal"}

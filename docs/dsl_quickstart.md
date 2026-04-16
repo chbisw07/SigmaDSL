@@ -124,3 +124,29 @@ The golden-driven evaluator examples live under:
 
 - `tests/fixtures/eval/` (rules + bar series)
 - `tests/golden/eval_*.json` (expected deterministic decisions + trace)
+
+## CLI runner (v0.3-B)
+
+Sprint 0.3-B adds a minimal runner from CSV bars to JSON decisions:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+Default output format is JSONL (one decision per line). Redirect to a file if desired:
+
+```bash
+sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr > decisions.jsonl
+```
+
+Explain a decision (re-runs deterministically and prints the emitting rule trace):
+
+```bash
+sigmadsl explain --decision-id D0003 --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+CSV requirements (v0.3-B):
+
+- required columns: `symbol,timestamp,open,high,low,close,volume`
+- optional columns: `underlying_return_5m,data_is_fresh,session_is_regular`
+- single symbol only (multi-symbol series is deferred)

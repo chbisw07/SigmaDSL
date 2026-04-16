@@ -1,0 +1,42 @@
+Decision D0003
+{
+  "event_index": 1,
+  "id": "D0003",
+  "kind": "signal",
+  "reason": "close_gt_prior_high",
+  "rule_name": "EQ: Breakout",
+  "signal_kind": "BREAKOUT",
+  "strength": null,
+  "symbol": "TCS",
+  "timestamp": "2026-01-01T09:20:00"
+}
+Trace
+{
+  "event": {
+    "index": 1,
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:20:00"
+  },
+  "rule": {
+    "actions": [
+      {
+        "args": {
+          "kind": "BREAKOUT",
+          "reason": "close_gt_prior_high"
+        },
+        "decision_id": "D0003",
+        "verb": "emit_signal"
+      }
+    ],
+    "context": "underlying",
+    "evaluated_branches": [
+      {
+        "branch_kind": "when",
+        "expr": "bar . close > prior_high ( 2 )",
+        "result": true
+      }
+    ],
+    "rule_name": "EQ: Breakout",
+    "selected_branch": "when"
+  }
+}

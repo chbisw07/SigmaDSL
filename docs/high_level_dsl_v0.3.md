@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v0.3
 
-Status: Implemented (deterministic evaluator + trace).  
-Scope: **Sprint 0.3-A** (“Deterministic evaluator + trace”).
+Status: Implemented (deterministic evaluator + trace + CLI runner).  
+Scope: **Sprint 0.3-A** (“Deterministic evaluator + trace”) + **Sprint 0.3-B** (“CLI run + JSON output”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -12,7 +12,7 @@ File role: High-level version summary (not a full spec copy-forward).
 
 This document describes what is **new** at the **v0.3 boundary**, based on implemented behavior in the repo.
 
-## What v0.3 adds (Sprint 0.3-A)
+## What v0.3 adds (Sprints 0.3-A / 0.3-B)
 
 v0.3 introduces the first executable slice of SigmaDSL:
 
@@ -23,6 +23,12 @@ v0.3 introduces the first executable slice of SigmaDSL:
   - branch predicate outcomes
   - which branch fired
   - what actions were emitted (verb + args) and which decision IDs were produced
+
+Sprint 0.3-B adds a minimal user-facing runner surface:
+
+- `sigmadsl run --input bars.csv --rules path/` to evaluate rule packs on CSV bar data
+- deterministic JSON decision output (JSONL by default)
+- `sigmadsl explain --decision-id ...` for basic “why did this decision fire?” inspection
 
 ## Runtime scope (v0.3-A)
 
@@ -83,8 +89,25 @@ All trace/decision outputs are stable and suitable for golden tests.
 
 `sigmadsl validate` and `sigmadsl lint` continue to work as in v0.2.
 
-Sprint 0.3-A does **not** ship a public `sigmadsl run` CLI yet (that is Sprint 0.3-B).
-Instead, v0.3-A is verified via evaluator fixtures and golden tests in the repository.
+### `sigmadsl run` (v0.3-B)
+
+```bash
+sigmadsl run --input path/to/bars.csv --rules path/to/rules/
+```
+
+Notes (v0.3-B scope):
+
+- CSV must contain a **single symbol** (multi-symbol evaluation is deferred)
+- decisions are emitted deterministically in event→rule order
+- output is JSONL by default (redirect to a file if desired)
+
+### `sigmadsl explain` (v0.3-B)
+
+```bash
+sigmadsl explain --decision-id D0003 --input path/to/bars.csv --rules path/to/rules/
+```
+
+Explain re-runs evaluation deterministically and prints the emitting rule’s predicate results and actions.
 
 ## Guardrails remain in effect
 
@@ -95,7 +118,6 @@ Instead, v0.3-A is verified via evaluator fixtures and golden tests in the repos
 
 ## Known limitations / deferred items
 
-- CSV runner and user-facing `sigmadsl run` command (Sprint 0.3-B)
 - replay/diff and parity harness (v0.4)
 - indicators (v0.5), imports/packaging (v0.6)
 - options/chain contexts and intent/plan/risk (v1.x / v2.0)
@@ -105,4 +127,3 @@ Instead, v0.3-A is verified via evaluator fixtures and golden tests in the repos
 - Added minimal equity/bar runtime model + deterministic evaluator
 - Added stable trace records with predicate outcomes and emitted decisions
 - Added fixture/golden test coverage proving deterministic behavior
-

@@ -1,0 +1,1 @@
+tests/fixtures/run/bars_missing_col.csv SD520 error: CSV is missing required column(s): close
