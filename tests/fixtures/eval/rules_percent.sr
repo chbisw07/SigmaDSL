@@ -1,0 +1,6 @@
+rule "EQ: Return GT 0.2%" in underlying:
+    when underlying.return_5m > 0.2%:
+        then emit_signal(kind="RET_UP", reason="ret_gt_0_2pct")
+    else:
+        then annotate(note="ret_small")
+

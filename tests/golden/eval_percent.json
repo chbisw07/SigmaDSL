@@ -1,0 +1,151 @@
+{
+  "decisions": [
+    {
+      "event_index": 0,
+      "id": "D0001",
+      "kind": "annotation",
+      "note": "ret_small",
+      "rule_name": "EQ: Return GT 0.2%",
+      "symbol": "INFY",
+      "timestamp": "2026-01-02T09:15:00"
+    },
+    {
+      "event_index": 1,
+      "id": "D0002",
+      "kind": "signal",
+      "reason": "ret_gt_0_2pct",
+      "rule_name": "EQ: Return GT 0.2%",
+      "signal_kind": "RET_UP",
+      "strength": null,
+      "symbol": "INFY",
+      "timestamp": "2026-01-02T09:20:00"
+    },
+    {
+      "event_index": 2,
+      "id": "D0003",
+      "kind": "annotation",
+      "note": "ret_small",
+      "rule_name": "EQ: Return GT 0.2%",
+      "symbol": "INFY",
+      "timestamp": "2026-01-02T09:25:00"
+    }
+  ],
+  "trace": {
+    "engine_version": "v0.3-a",
+    "events": [
+      {
+        "event": {
+          "index": 0,
+          "symbol": "INFY",
+          "timestamp": "2026-01-02T09:15:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "note": "ret_small"
+                },
+                "decision_id": "D0001",
+                "verb": "annotate"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0001"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "underlying . return_5m > 0.2%",
+                "result": false
+              },
+              {
+                "branch_kind": "else",
+                "expr": null,
+                "result": null
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Return GT 0.2%",
+            "selected_branch": "else"
+          }
+        ]
+      },
+      {
+        "event": {
+          "index": 1,
+          "symbol": "INFY",
+          "timestamp": "2026-01-02T09:20:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "kind": "RET_UP",
+                  "reason": "ret_gt_0_2pct"
+                },
+                "decision_id": "D0002",
+                "verb": "emit_signal"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0002"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "underlying . return_5m > 0.2%",
+                "result": true
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Return GT 0.2%",
+            "selected_branch": "when"
+          }
+        ]
+      },
+      {
+        "event": {
+          "index": 2,
+          "symbol": "INFY",
+          "timestamp": "2026-01-02T09:25:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "note": "ret_small"
+                },
+                "decision_id": "D0003",
+                "verb": "annotate"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0003"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "underlying . return_5m > 0.2%",
+                "result": false
+              },
+              {
+                "branch_kind": "else",
+                "expr": null,
+                "result": null
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Return GT 0.2%",
+            "selected_branch": "else"
+          }
+        ]
+      }
+    ]
+  }
+}

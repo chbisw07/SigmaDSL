@@ -1,0 +1,240 @@
+{
+  "decisions": [
+    {
+      "event_index": 0,
+      "id": "D0001",
+      "kind": "annotation",
+      "note": "close_le_100",
+      "rule_name": "EQ: Close GT 100",
+      "symbol": "TCS",
+      "timestamp": "2026-01-01T09:15:00"
+    },
+    {
+      "event_index": 1,
+      "id": "D0002",
+      "kind": "signal",
+      "reason": "close_gt_100",
+      "rule_name": "EQ: Close GT 100",
+      "signal_kind": "GT100",
+      "strength": "0.7",
+      "symbol": "TCS",
+      "timestamp": "2026-01-01T09:20:00"
+    },
+    {
+      "event_index": 1,
+      "id": "D0003",
+      "kind": "signal",
+      "reason": "close_gt_prior_high",
+      "rule_name": "EQ: Breakout",
+      "signal_kind": "BREAKOUT",
+      "strength": null,
+      "symbol": "TCS",
+      "timestamp": "2026-01-01T09:20:00"
+    },
+    {
+      "event_index": 2,
+      "id": "D0004",
+      "kind": "signal",
+      "reason": "close_gt_100",
+      "rule_name": "EQ: Close GT 100",
+      "signal_kind": "GT100",
+      "strength": "0.7",
+      "symbol": "TCS",
+      "timestamp": "2026-01-01T09:25:00"
+    },
+    {
+      "event_index": 2,
+      "id": "D0005",
+      "kind": "signal",
+      "reason": "close_gt_prior_high",
+      "rule_name": "EQ: Breakout",
+      "signal_kind": "BREAKOUT",
+      "strength": null,
+      "symbol": "TCS",
+      "timestamp": "2026-01-01T09:25:00"
+    }
+  ],
+  "trace": {
+    "engine_version": "v0.3-a",
+    "events": [
+      {
+        "event": {
+          "index": 0,
+          "symbol": "TCS",
+          "timestamp": "2026-01-01T09:15:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "note": "close_le_100"
+                },
+                "decision_id": "D0001",
+                "verb": "annotate"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0001"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > 100",
+                "result": false
+              },
+              {
+                "branch_kind": "else",
+                "expr": null,
+                "result": null
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Close GT 100",
+            "selected_branch": "else"
+          },
+          {
+            "actions": [],
+            "context": "underlying",
+            "decisions_emitted": [],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > prior_high ( 2 )",
+                "result": false
+              }
+            ],
+            "fired": false,
+            "rule_name": "EQ: Breakout",
+            "selected_branch": null
+          }
+        ]
+      },
+      {
+        "event": {
+          "index": 1,
+          "symbol": "TCS",
+          "timestamp": "2026-01-01T09:20:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "kind": "GT100",
+                  "reason": "close_gt_100",
+                  "strength": "0.7"
+                },
+                "decision_id": "D0002",
+                "verb": "emit_signal"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0002"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > 100",
+                "result": true
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Close GT 100",
+            "selected_branch": "when"
+          },
+          {
+            "actions": [
+              {
+                "args": {
+                  "kind": "BREAKOUT",
+                  "reason": "close_gt_prior_high"
+                },
+                "decision_id": "D0003",
+                "verb": "emit_signal"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0003"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > prior_high ( 2 )",
+                "result": true
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Breakout",
+            "selected_branch": "when"
+          }
+        ]
+      },
+      {
+        "event": {
+          "index": 2,
+          "symbol": "TCS",
+          "timestamp": "2026-01-01T09:25:00"
+        },
+        "rules": [
+          {
+            "actions": [
+              {
+                "args": {
+                  "kind": "GT100",
+                  "reason": "close_gt_100",
+                  "strength": "0.7"
+                },
+                "decision_id": "D0004",
+                "verb": "emit_signal"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0004"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > 100",
+                "result": true
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Close GT 100",
+            "selected_branch": "when"
+          },
+          {
+            "actions": [
+              {
+                "args": {
+                  "kind": "BREAKOUT",
+                  "reason": "close_gt_prior_high"
+                },
+                "decision_id": "D0005",
+                "verb": "emit_signal"
+              }
+            ],
+            "context": "underlying",
+            "decisions_emitted": [
+              "D0005"
+            ],
+            "evaluated_branches": [
+              {
+                "branch_kind": "when",
+                "expr": "bar . close > prior_high ( 2 )",
+                "result": true
+              }
+            ],
+            "fired": true,
+            "rule_name": "EQ: Breakout",
+            "selected_branch": "when"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,10 +1,12 @@
-# SigmaDSL Quickstart (v0.1-A)
+# SigmaDSL Quickstart (v0.3-A)
 
-This quickstart covers **Phase A early sprints**:
+This quickstart covers early **Phase A + Phase B** sprints:
 
 - **Sprint 0.1-A**: parsing + deterministic diagnostics
 - **Sprint 0.1-B**: sample pack + docs
 - **Sprint 0.2-A**: type checker v1 (comparisons/boolean ops/verb argument types)
+- **Sprint 0.2-B**: lint guardrails (forbidden constructs + signal-profile compliance)
+- **Sprint 0.3-A**: deterministic evaluator + trace (fixture-driven; no public runner CLI yet)
 
 ## Install (dev)
 
@@ -104,6 +106,21 @@ See `docs/language_guardrails.md` for a concise explanation of:
 
 ## Limitations (intentional, for later sprints)
 
-- no evaluator/runtime semantics (type checking only; no execution)
+- no public `sigmadsl run` command yet (CSV runner is Sprint 0.3-B)
 - expression/function and verb signature sets are intentionally minimal and will expand later
 - no imports/packaging, replay, indicators, planning, risk, options/chain
+
+## Deterministic evaluation + trace (v0.3-A)
+
+Sprint 0.3-A ships a minimal evaluator for in-memory equity/bar events, verified via fixtures and goldens.
+
+Run evaluator tests:
+
+```bash
+pytest -k evaluator
+```
+
+The golden-driven evaluator examples live under:
+
+- `tests/fixtures/eval/` (rules + bar series)
+- `tests/golden/eval_*.json` (expected deterministic decisions + trace)

@@ -2,16 +2,23 @@
 
 SigmaDSL is a **Python-shaped** (indentation-based), **deterministic** rule DSL. It is **not Python** and is designed to be safely validated and executed without Python escape hatches.
 
-This repository currently implements **Phase A** through **Sprint 0.2-B** (authoring bootstrap + typed authoring + lint guardrails).
+This repository currently implements:
+
+- **Phase A** through **Sprint 0.2-B** (authoring bootstrap + typed authoring + lint guardrails)
+- **Phase B** through **Sprint 0.3-A** (deterministic evaluator + trace, verified via fixtures/goldens)
 
 ## DSL version docs
 
 - `docs/DSL_v0.md` (base spec)
 - `docs/high_level_dsl_v0.1.md` (v0.1 snapshot: parse/diagnose + samples/docs)
 - `docs/high_level_dsl_v0.2.md` (v0.2 snapshot: type checker v1 + lint guardrails)
+- `docs/high_level_dsl_v0.3.md` (v0.3 snapshot: deterministic evaluator + trace)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
-spec-level copy-forward updates beyond `docs/DSL_v0.md`. None exist yet.
+spec-level copy-forward updates beyond `docs/DSL_v0.md`.
+Current spec snapshot docs:
+
+- `docs/dsl_v0.3.md` (v0.3-A: deterministic evaluation + trace chapters concretized)
 
 ## Install (dev)
 
@@ -61,4 +68,6 @@ Supported structural keywords: `rule`, `in`, `when`, `elif`, `else`, `then`.
 
 Type checking is implemented in **Sprint 0.2-A** for a minimal set of types/operators/verb arguments.
 
-Not implemented yet (intentionally): evaluation/runtime, replay/diff, indicators, imports/packaging, options/chain, planning/risk.
+v0.3-A introduces a minimal deterministic evaluator + trace as a library surface (see `tests/test_evaluator_trace.py`).
+
+Not implemented yet (intentionally): user-facing `sigmadsl run` (Sprint 0.3-B), replay/diff, indicators, imports/packaging, options/chain, planning/risk.

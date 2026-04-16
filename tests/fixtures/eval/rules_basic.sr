@@ -1,0 +1,10 @@
+rule "EQ: Close GT 100" in underlying:
+    when bar.close > 100:
+        then emit_signal(kind="GT100", reason="close_gt_100", strength=0.7)
+    else:
+        then annotate(note="close_le_100")
+
+rule "EQ: Breakout" in underlying:
+    when bar.close > prior_high(2):
+        then emit_signal(kind="BREAKOUT", reason="close_gt_prior_high")
+

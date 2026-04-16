@@ -1,0 +1,33 @@
+[
+  {
+    "symbol": "INFY",
+    "timestamp": "2026-01-02T09:15:00",
+    "open": "1500",
+    "high": "1502",
+    "low": "1490",
+    "close": "1495",
+    "volume": "800",
+    "underlying_return_5m": "0.001"
+  },
+  {
+    "symbol": "INFY",
+    "timestamp": "2026-01-02T09:20:00",
+    "open": "1495",
+    "high": "1508",
+    "low": "1495",
+    "close": "1505",
+    "volume": "900",
+    "underlying_return_5m": "0.003"
+  },
+  {
+    "symbol": "INFY",
+    "timestamp": "2026-01-02T09:25:00",
+    "open": "1505",
+    "high": "1506",
+    "low": "1488",
+    "close": "1490",
+    "volume": "850",
+    "underlying_return_5m": "-0.004"
+  }
+]
+
