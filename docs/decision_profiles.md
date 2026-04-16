@@ -58,13 +58,14 @@ The allowlist is enforced deterministically during validation/linting and is fai
 
 Every decision record includes a stable envelope:
 - `schema`: `sigmadsl.decision`
-- `schema_version`: `1.0-a`
+- `schema_version`: `1.0-b`
 - `id`: stable decision id (e.g., `D0003`)
 - `kind`: `signal` | `annotation` | `intent` | `constraint`
 - `profile`: `signal` | `intent` | `risk`
 - `verb`: the verb that produced the decision
 - `rule_name`, `context`, `symbol`, `event_index`, `timestamp`
 - `trace_ref`: `{ event_index, rule_name, action_index }`
+- `enforcement`: `{ status, blocked_by }`
 
 Kind-specific fields:
 - `signal`:
@@ -80,6 +81,13 @@ Kind-specific fields:
 
 ## Notes on limitations
 
-- Constraints emitted by `risk` are **not enforced** against signals/intents in v1.0-A (that is Sprint v1.0-B).
-- Intent outputs are **not** converted into execution plans (that is later, per roadmap).
+### Risk enforcement (v1.0-B)
 
+If you run with `--risk-rules`, the engine evaluates that rule pack in a separate risk phase and applies constraints
+to prior decisions deterministically.
+
+See `docs/risk_constraints.md` and `examples/risk_rules/` for the current behavior.
+
+### Deferred items
+
+- Intent outputs are **not** converted into execution plans (later).

@@ -37,7 +37,7 @@ def test_cli_run_log_out_and_replay_equivalence(tmp_path: Path):
     # Basic sanity check of log schema/content.
     d = json.loads(log_path.read_text(encoding="utf-8"))
     assert d["schema"] == "sigmadsl.runlog"
-    assert d["schema_version"] == "1.0-a"
+    assert d["schema_version"] == "1.0-b"
     assert d["profile"] == "signal"
     assert d["input"]["csv"]["path"] == "tests/fixtures/run/bars_basic.csv"
     assert len(d["input"]["events"]) == 3
@@ -66,7 +66,7 @@ def test_cli_run_log_out_records_referenced_indicators(tmp_path: Path):
     assert run_res.exit_code == 0
 
     d = json.loads(log_path.read_text(encoding="utf-8"))
-    assert d["schema_version"] == "1.0-a"
+    assert d["schema_version"] == "1.0-b"
     assert d["indicators"]["referenced"] == ["atr@1", "ema@1", "rsi@1", "vwap@1"]
 
 

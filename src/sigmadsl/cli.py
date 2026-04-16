@@ -104,6 +104,9 @@ def run(
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
+    risk_rules: Path | None = typer.Option(
+        None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
+    ),
     format: str = typer.Option("jsonl", "--format", help="Output format: jsonl or json"),
     log_out: Path | None = typer.Option(None, "--log-out", help="Write a replayable run log (Sprint 0.4-A)"),
 ):
@@ -116,7 +119,9 @@ def run(
         typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
         raise typer.Exit(code=2)
 
-    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, profile=p, log_out=log_out)
+    result, diags = run_underlying_from_csv_with_log(
+        rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=log_out
+    )
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -147,6 +152,9 @@ def explain(
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
+    risk_rules: Path | None = typer.Option(
+        None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
+    ),
 ):
     """
     Explain deterministic evaluation outcomes (Sprint 0.4-B).
@@ -161,7 +169,9 @@ def explain(
         typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
         raise typer.Exit(code=2)
 
-    result, diags = run_underlying_from_csv_with_log(rules_path=rules, input_csv=input, profile=p, log_out=None)
+    result, diags = run_underlying_from_csv_with_log(
+        rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=None
+    )
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))

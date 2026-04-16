@@ -11,6 +11,7 @@ from .decisions import (
     AnnotationDecision,
     ConstraintDecision,
     Decision,
+    DecisionEnforcement,
     IntentDecision,
     SignalDecision,
 )
@@ -82,12 +83,15 @@ def evaluate_underlying(
     events: list[UnderlyingEvent],
     *,
     profile: DecisionProfile = DecisionProfile.signal,
+    risk_rules: list[CompiledRule] | None = None,
     engine_version: str = "v0.3-a",
 ) -> EvalResult:
     # Deterministic ordering: file path + source order + rule name.
     ordered_rules = sorted(rules, key=lambda r: r.order_key())
+    ordered_risk_rules = sorted(risk_rules or [], key=lambda r: r.order_key())
 
     decisions: list[Decision] = []
+    decision_index_by_id: dict[str, int] = {}
     event_traces: list[EventTrace] = []
     indicator_cache = IndicatorCache()
     indicators: dict[str, IndicatorDef] = indicator_registry()
@@ -108,6 +112,7 @@ def evaluate_underlying(
         rule_traces: list[RuleTrace] = []
         history = events[: pos + 1]
 
+        # Phase 1: primary profile evaluation (signal or intent)
         for compiled in ordered_rules:
             rule = compiled.rule
             if rule.context != "underlying":
@@ -156,6 +161,7 @@ def evaluate_underlying(
                     action_traces.append(ActionTrace(verb=verb, args=args, decision_id=did))
 
                     trace_ref = {"event_index": ev.index, "rule_name": rule.name, "action_index": action_index}
+                    enforcement = DecisionEnforcement(status="allowed", blocked_by=())
 
                     if verb == "emit_signal":
                         kind = args.get("kind")
@@ -179,6 +185,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 signal_kind=kind,
                                 reason=reason,
                                 strength=strength,
@@ -200,6 +207,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 note=note,
                             )
                         )
@@ -228,6 +236,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 intent_action="declare",
                                 intent_kind=ik,
                                 quantity=qty,
@@ -251,6 +260,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 intent_action="cancel",
                                 intent_kind=None,
                                 quantity=None,
@@ -277,6 +287,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 constraint_kind="max_position",
                                 reason=reason,
                                 quantity=qty,
@@ -298,6 +309,7 @@ def evaluate_underlying(
                                 event_index=ev.index,
                                 timestamp=ev.bar.timestamp,
                                 trace_ref=trace_ref,
+                                enforcement=enforcement,
                                 constraint_kind="block",
                                 reason=reason,
                                 quantity=None,
@@ -306,6 +318,9 @@ def evaluate_underlying(
                     else:
                         # Type checker and lint should prevent this.
                         raise EvalError(f"Unsupported verb at runtime: {verb!r}")
+
+                    # Track id -> index for later enforcement updates (v1.0-B).
+                    decision_index_by_id[did] = len(decisions) - 1
 
             rule_traces.append(
                 RuleTrace(
@@ -319,9 +334,160 @@ def evaluate_underlying(
                 )
             )
 
-        event_traces.append(
-            EventTrace(symbol=ev.symbol, index=ev.index, timestamp=ev.bar.timestamp, rules=tuple(rule_traces))
-        )
+        # Phase 2: risk evaluation + enforcement (v1.0-B)
+        if ordered_risk_rules:
+            from dataclasses import replace
+
+            from .risk_constraints import applied_blocks_for_event
+
+            risk_profile = DecisionProfile.risk
+            allowed_verbs = allowed_verbs_for_profile(risk_profile)
+            risk_rule_traces: list[RuleTrace] = []
+            risk_constraints: list[ConstraintDecision] = []
+
+            for compiled in ordered_risk_rules:
+                rule = compiled.rule
+                if rule.context != "underlying":
+                    continue
+
+                evaluated_branches: list[BranchPredicateTrace] = []
+                selected_branch: ast.Branch | None = None
+                selected_kind: str | None = None
+                action_traces: list[ActionTrace] = []
+
+                for br in rule.branches:
+                    if br.kind == "else":
+                        evaluated_branches.append(BranchPredicateTrace(branch_kind="else", expr=None, result=None))
+                        if selected_branch is None:
+                            selected_branch = br
+                            selected_kind = "else"
+                        break
+
+                    assert br.condition is not None
+                    result = _eval_predicate(br.condition.node, ev, history, indicator_cache, indicators)
+                    evaluated_branches.append(
+                        BranchPredicateTrace(branch_kind=br.kind, expr=br.condition.text, result=result)
+                    )
+                    if result and selected_branch is None:
+                        selected_branch = br
+                        selected_kind = br.kind
+                        break
+
+                emitted_ids: list[str] = []
+                if selected_branch is not None and selected_kind is not None:
+                    for action_index, then_line in enumerate(selected_branch.actions):
+                        verb = then_line.call.name
+                        if verb not in allowed_verbs:
+                            raise EvalError(f"Verb {verb!r} is not allowed for profile {risk_profile.value!r}")
+                        args_items = [
+                            (a.name, _eval_value(a.value.node, ev, history, indicator_cache, indicators))
+                            for a in then_line.call.args
+                        ]
+                        args = {k: v for k, v in sorted(args_items, key=lambda kv: kv[0])}
+                        did = next_id()
+                        emitted_ids.append(did)
+                        action_traces.append(ActionTrace(verb=verb, args=args, decision_id=did))
+
+                        trace_ref = {"event_index": ev.index, "rule_name": rule.name, "action_index": action_index}
+                        enforcement = DecisionEnforcement(status="allowed", blocked_by=())
+
+                        if verb == "annotate":
+                            note = args.get("note")
+                            if not isinstance(note, str):
+                                raise EvalError("annotate.note must be a string")
+                            decisions.append(
+                                AnnotationDecision(
+                                    id=did,
+                                    kind="annotation",
+                                    profile=risk_profile,
+                                    verb=verb,
+                                    rule_name=rule.name,
+                                    context=rule.context,
+                                    symbol=ev.symbol,
+                                    event_index=ev.index,
+                                    timestamp=ev.bar.timestamp,
+                                    trace_ref=trace_ref,
+                                    enforcement=enforcement,
+                                    note=note,
+                                )
+                            )
+                        elif verb == "constrain_max_position":
+                            qty = args.get("quantity")
+                            reason = args.get("reason")
+                            if not isinstance(qty, Decimal):
+                                raise EvalError("constrain_max_position.quantity must be a number")
+                            if reason is not None and not isinstance(reason, str):
+                                raise EvalError("constrain_max_position.reason must be a string")
+                            cd = ConstraintDecision(
+                                id=did,
+                                kind="constraint",
+                                profile=risk_profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                constraint_kind="max_position",
+                                reason=reason,
+                                quantity=qty,
+                            )
+                            decisions.append(cd)
+                            risk_constraints.append(cd)
+                        elif verb == "block":
+                            reason = args.get("reason")
+                            if not isinstance(reason, str):
+                                raise EvalError("block.reason must be a string")
+                            cd = ConstraintDecision(
+                                id=did,
+                                kind="constraint",
+                                profile=risk_profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.bar.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                constraint_kind="block",
+                                reason=reason,
+                                quantity=None,
+                            )
+                            decisions.append(cd)
+                            risk_constraints.append(cd)
+                        else:
+                            raise EvalError(f"Unsupported verb at runtime: {verb!r}")
+
+                        decision_index_by_id[did] = len(decisions) - 1
+
+                risk_rule_traces.append(
+                    RuleTrace(
+                        rule_name=rule.name,
+                        context=rule.context,
+                        evaluated_branches=tuple(evaluated_branches),
+                        selected_branch=selected_kind,
+                        fired=bool(emitted_ids),
+                        decisions_emitted=tuple(emitted_ids),
+                        actions=tuple(action_traces),
+                    )
+                )
+
+            # Apply constraints to primary decisions emitted at this event.
+            blocks = applied_blocks_for_event(primary_decisions=decisions, constraints=risk_constraints, event_index=ev.index)
+            for target_id, blocked_by in blocks.items():
+                idx = decision_index_by_id.get(target_id)
+                if idx is None:
+                    continue
+                d = decisions[idx]
+                decisions[idx] = replace(d, enforcement=DecisionEnforcement(status="blocked", blocked_by=blocked_by))
+
+            # Append risk traces after primary traces for this event.
+            rule_traces.extend(risk_rule_traces)
+
+        event_traces.append(EventTrace(symbol=ev.symbol, index=ev.index, timestamp=ev.bar.timestamp, rules=tuple(rule_traces)))
 
     return EvalResult(decisions=tuple(decisions), trace=RunTrace(engine_version=engine_version, events=tuple(event_traces)))
 

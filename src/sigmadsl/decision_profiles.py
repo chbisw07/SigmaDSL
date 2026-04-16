@@ -10,7 +10,7 @@ class DecisionProfile(str, Enum):
 
 
 DECISION_SCHEMA = "sigmadsl.decision"
-DECISION_SCHEMA_VERSION = "1.0-a"
+DECISION_SCHEMA_VERSION = "1.0-b"
 
 
 def parse_profile(s: str) -> DecisionProfile | None:
@@ -52,4 +52,3 @@ def decision_kind_for_verb(verb: str) -> str:
     if v in ("constrain_max_position", "block"):
         return "constraint"
     return "unknown"
-

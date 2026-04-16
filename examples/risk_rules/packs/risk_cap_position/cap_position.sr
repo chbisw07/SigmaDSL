@@ -1,0 +1,4 @@
+rule "RISK: Cap max position 50" in underlying:
+    when true:
+        then constrain_max_position(quantity=50, reason="cap_50")
+

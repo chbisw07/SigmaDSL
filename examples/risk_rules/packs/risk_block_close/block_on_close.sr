@@ -1,0 +1,4 @@
+rule "RISK: Block close <= 100" in underlying:
+    when bar.close <= 100:
+        then block(reason="close_le_100")
+

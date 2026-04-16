@@ -266,3 +266,15 @@ sigmadsl run --input bars.csv --rules path/to/rules.sr --profile risk
 ```
 
 See `docs/decision_profiles.md` for the implemented allowlists and the stable decision schema.
+
+## Risk constraints (v1.0-B)
+
+v1.0-B adds a separate deterministic risk phase that can block prior decisions in a fail-closed way.
+
+Runnable examples live under `examples/risk_rules/`.
+
+```bash
+sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --rules examples/risk_rules/packs/signal_always --risk-rules examples/risk_rules/packs/risk_block_close
+```
+
+See `docs/risk_constraints.md` for the implemented semantics.

@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v1.0
 
-Status: Implemented (v1.0-A profile model + stable decision schema).  
-Scope: **Sprint v1.0-A** (“Signal / Intent / Risk profiles”).
+Status: Implemented (v1.0-A profiles + stable schema; v1.0-B risk phase).  
+Scope: **Sprint v1.0-A** (“Signal / Intent / Risk profiles”) + **Sprint v1.0-B** (“Risk constraints v1”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -48,9 +48,18 @@ while adding the v1.0 envelope fields.
 
 `sigmadsl replay` and `sigmadsl diff` remain deterministic; run logs record the selected profile.
 
+## What v1.0 adds (v1.0-B)
+
+v1.0-B introduces a separate deterministic risk phase:
+
+- `--risk-rules <path>` evaluates a separate **risk rule pack** after primary decision generation
+- emitted `constraint` decisions can **block** prior decisions in a fail-closed way
+- blocked decisions are represented via `enforcement={status, blocked_by}`
+
+Runnable examples: `examples/risk_rules/`.
+
 ## Known limitations / deferred items
 
 - no in-language profile declaration yet (CLI-only selection in v1.0-A)
 - intent decisions are not converted into plans (later)
-- risk constraints are not enforced against other outputs yet (v1.0-B)
-
+- risk constraints are sprint-scoped and event-local (no portfolio-wide enforcement yet)

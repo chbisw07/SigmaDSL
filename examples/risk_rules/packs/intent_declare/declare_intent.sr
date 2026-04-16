@@ -1,0 +1,4 @@
+rule "EQ: Always intent" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=100, reason="always")
+

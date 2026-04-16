@@ -1,0 +1,4 @@
+rule "EQ: Always signal" in underlying:
+    when true:
+        then emit_signal(kind="BUY", reason="always")
+

@@ -1,7 +1,7 @@
 # Sigma Rule DSL — Specification Snapshot (`dsl_v1.0.md`)
 
 Document ID: `dsl_v1.0`  
-Status: Implemented snapshot (v1.0-A: signal/intent/risk profiles + stable decision schema)  
+Status: Implemented snapshot (v1.0-A: profiles + stable decision schema; v1.0-B: risk constraints v1)  
 Last updated: 2026-04-16  
 Related source documents (mandatory):
 - `docs/dsl.md` — thesis backbone + architecture boundaries (source of truth)
@@ -12,12 +12,14 @@ Related source documents (mandatory):
 ## Snapshot note (v1.0)
 
 This document is a **full copy-forward** of `docs/dsl_v0.6.md` with **only the referenced v1.0 chapters updated**
-to reflect implemented Sprint v1.0-A decision profiles and stable decision output schema.
+to reflect implemented v1.0-A profiles/stable decision schema and v1.0-B risk constraints.
 
 Updated sections in this snapshot:
 - Chapter 10.2 (language profiles concretized for v1.0-A)
 - Chapter 15.4 (decision output types concretized for v1.0-A)
-- Chapter 6.3.1 (run log schema updated for v1.0-A profile + decision schema metadata)
+- Chapter 6.3.1 (run log schema updated for v1.0-B: profile + decision schema + risk sources)
+- Chapter 18.2 (risk constraints v1 concretized for v1.0-B)
+- Chapter 21.1 (CLI run contract updated for `--risk-rules`)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -422,12 +424,12 @@ Mitigate:
 Rationale: Replayability is a product requirement by v0.4; the runner needs a concrete, testable log schema.  
 Implications: Changes to log schema are versioned; replay must fail-closed on unsupported schema versions.
 
-### 6.3.1 v1.0-A run log schema (profile + decision schema metadata)
+### 6.3.1 v1.0-B run log schema (profile + decision schema + risk sources)
 
-In v1.0-A, the runner produces a **single JSON run log** with:
+In v1.0-B, the runner produces a **single JSON run log** with:
 
 - `schema`: `sigmadsl.runlog`
-- `schema_version`: `1.0-a`
+- `schema_version`: `1.0-b`
 
 The log is designed to be **self-contained** for replay:
 
@@ -447,6 +449,8 @@ Minimum contents (v1.0-A):
 - profile + decision schema metadata (v1.0-A):
   - `profile` (e.g., `signal`)
   - `decision_schema = { schema, schema_version }`
+- risk sources (v1.0-B, optional):
+  - `risk.rules.files[] = { path, sha256, text }` (embedded snapshots for replay)
 - indicator pins (v0.5-A+):
   - `indicators.registry_version` (engine-side registry identifier)
   - `indicators.pinned[]` (all pinned indicator versions shipped by the engine)
@@ -456,9 +460,10 @@ Notes:
 - replay does not rely on the current filesystem state of original rule/CSV files.
 - v0.5-A adds indicator version pinning to support replay-safe feature computation.
 - Backward compatibility:
-  - v1.0-A loaders should continue accepting:
+  - v1.0-B loaders should continue accepting:
     - `schema_version: 0.4-a` logs (which omit `indicators` and profile metadata)
     - `schema_version: 0.5-a` logs (which omit profile + decision schema metadata)
+    - `schema_version: 1.0-a` logs (which omit the optional `risk` section)
 
 ### 6.3.2 v0.4-B diff contract (decisions)
 
@@ -1206,10 +1211,10 @@ Implications: Decision output schema is versioned and protected by goldens.
 
 `sigmadsl run` emits decisions as JSON lines (one decision per line) in deterministic order.
 
-Current v1.0-A decision JSON fields (minimum set):
+Current v1.0-B decision JSON fields (minimum set):
 
 - `schema`: `sigmadsl.decision`
-- `schema_version`: `1.0-a`
+- `schema_version`: `1.0-b`
 - `id`
 - `kind`: `signal` | `annotation` | `intent` | `constraint`
 - `profile`: `signal` | `intent` | `risk`
@@ -1217,6 +1222,7 @@ Current v1.0-A decision JSON fields (minimum set):
 - `rule_name`, `context`
 - `symbol`, `event_index`, `timestamp` (timestamp treated as an opaque identity)
 - `trace_ref = { event_index, rule_name, action_index }`
+- `enforcement = { status, blocked_by }`
 - `event_index` (0..N-1 within the evaluated series)
 
 Verb-specific fields:
@@ -1384,15 +1390,21 @@ Risk rules:
 
 ## 18.2 Minimal risk scope (v1.0)
 
-**Status: PROVISIONAL**  
-Rationale: v1.0 requires “risk constraints v1” per roadmap; exact set to be refined.  
-Implications: Define minimal constraints that demonstrate value and safety.
+**Status: CURRENTLY DECIDED (v1.0-B implementation)**  
+Rationale: v1.0 requires a minimal, deterministic, fail-closed risk gate for equity outputs.  
+Implications: Risk runs as a separate phase and must be replayable.
 
-Candidate minimal constraints:
-- max notional exposure per symbol / portfolio (inputs required),
-- max number of concurrent intents per underlying,
-- session-based restrictions (no new intents near close),
-- block if required inputs are missing/stale.
+Implemented constraints (Sprint v1.0-B scope):
+- risk is evaluated as a separate phase after primary decision generation.
+- risk rules emit constraint decisions:
+  - `block(reason=...)`: blocks all primary decisions at the same event index.
+  - `constrain_max_position(quantity=..., ...)`: blocks `declare_intent(...)` when `quantity` exceeds the max.
+- blocked decisions are represented via `enforcement={status, blocked_by}`.
+- unsupported/unknown constraint kinds are treated as block-all (fail-closed).
+
+Current applicability boundary:
+- event-local only (constraints apply to decisions at the same event index).
+- no portfolio-wide stateful enforcement yet (deferred).
 
 ---
 
@@ -1452,7 +1464,7 @@ Planned commands (shipped incrementally; see `docs/dsl_proj_plan.md`):
 
 v0.4-A introduces the replay surface (and v0.5/v1.0 update the run log schema):
 
-- `run --log-out runlog.json` writes a self-contained run log (schema `sigmadsl.runlog` `1.0-a`)
+- `run --log-out runlog.json` writes a self-contained run log (schema `sigmadsl.runlog` `1.0-b`)
 - `replay --log runlog.json` re-evaluates from embedded snapshots and re-emits decision output deterministically
 
 v0.4-B concretizes the debugging surface:
@@ -1466,6 +1478,10 @@ v0.5-B adds lightweight pack introspection:
 - `profile path/to/rules/` prints a stable summary of:
   - which indicators are referenced (pinned versions),
   - which functions are called,
+v1.0-B adds risk gating as a separate phase:
+
+- `run --risk-rules path/to/risk_pack` applies deterministic constraints to prior decisions
+- risk sources are embedded in the run log for replay
   - which verbs are used.
 
 v0.6-A adds deterministic imports and module layout:

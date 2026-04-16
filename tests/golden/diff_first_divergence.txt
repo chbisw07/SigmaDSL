@@ -4,6 +4,6 @@ Diff
 - decisions_b: 5 (signal=4, annotation=1, intent=0, constraint=0)
 - first_divergence_index: 0
 A
-{"context": "underlying", "event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100", "profile": "signal", "rule_name": "EQ: Close GT 100", "schema": "sigmadsl.decision", "schema_version": "1.0-a", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "trace_ref": {"action_index": 0, "event_index": 0, "rule_name": "EQ: Close GT 100"}, "verb": "annotate"}
+{"context": "underlying", "enforcement": {"blocked_by": [], "status": "allowed"}, "event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100", "profile": "signal", "rule_name": "EQ: Close GT 100", "schema": "sigmadsl.decision", "schema_version": "1.0-b", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "trace_ref": {"action_index": 0, "event_index": 0, "rule_name": "EQ: Close GT 100"}, "verb": "annotate"}
 B
-{"context": "underlying", "event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100_variant", "profile": "signal", "rule_name": "EQ: Close GT 100", "schema": "sigmadsl.decision", "schema_version": "1.0-a", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "trace_ref": {"action_index": 0, "event_index": 0, "rule_name": "EQ: Close GT 100"}, "verb": "annotate"}
+{"context": "underlying", "enforcement": {"blocked_by": [], "status": "allowed"}, "event_index": 0, "id": "D0001", "kind": "annotation", "note": "close_le_100_variant", "profile": "signal", "rule_name": "EQ: Close GT 100", "schema": "sigmadsl.decision", "schema_version": "1.0-b", "symbol": "TCS", "timestamp": "2026-01-01T09:15:00", "trace_ref": {"action_index": 0, "event_index": 0, "rule_name": "EQ: Close GT 100"}, "verb": "annotate"}

@@ -69,6 +69,7 @@ def run_underlying_from_csv(
     rules_path: Path,
     input_csv: Path,
     profile: DecisionProfile = DecisionProfile.signal,
+    risk_rules_path: Path | None = None,
     engine_version: str = "v0.3-b",
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
     from .csv_input import load_underlying_events_csv
@@ -77,12 +78,22 @@ def run_underlying_from_csv(
     if rule_diags:
         return None, rule_diags
 
+    risk_compiled: list[CompiledRule] | None = None
+    if risk_rules_path is not None:
+        rc, risk_diags = load_compiled_rules(risk_rules_path, profile=DecisionProfile.risk)
+        if risk_diags:
+            return None, risk_diags
+        risk_compiled = rc
+
     events, csv_diags = load_underlying_events_csv(input_csv)
     if csv_diags:
         return None, csv_diags
 
     try:
-        return evaluate_underlying(compiled, events, profile=profile, engine_version=engine_version), []
+        return (
+            evaluate_underlying(compiled, events, profile=profile, risk_rules=risk_compiled, engine_version=engine_version),
+            [],
+        )
     except EvalError as e:
         return None, [
             diag(
@@ -99,6 +110,7 @@ def run_underlying_from_csv_with_log(
     rules_path: Path,
     input_csv: Path,
     profile: DecisionProfile = DecisionProfile.signal,
+    risk_rules_path: Path | None = None,
     engine_version: str = "v0.4-a",
     log_out: Path | None,
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
@@ -112,13 +124,24 @@ def run_underlying_from_csv_with_log(
     if rule_diags:
         return None, rule_diags
 
+    risk_compiled: list[CompiledRule] | None = None
+    risk_sources: list[RuleSource] = []
+    if risk_rules_path is not None:
+        risk_compiled, risk_sources, _, risk_diags = load_compiled_rules_with_sources(
+            risk_rules_path, profile=DecisionProfile.risk
+        )
+        if risk_diags:
+            return None, risk_diags
+
     events, meta, csv_diags = load_underlying_events_csv_with_meta(input_csv)
     if csv_diags:
         return None, csv_diags
     assert meta is not None
 
     try:
-        result = evaluate_underlying(compiled, events, profile=profile, engine_version=engine_version)
+        result = evaluate_underlying(
+            compiled, events, profile=profile, risk_rules=risk_compiled, engine_version=engine_version
+        )
     except EvalError as e:
         return None, [
             diag(
@@ -137,6 +160,7 @@ def run_underlying_from_csv_with_log(
             engine_version=engine_version,
             profile=profile.value,
             rules=tuple(sources),
+            risk_rules=tuple(risk_sources) if risk_rules_path is not None else None,
             input_csv=CsvSourceMeta(
                 path=str(input_csv),
                 sha256=sha256_text(csv_text),
@@ -168,6 +192,7 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
     assert log is not None
 
     compiled: list[CompiledRule] = []
+    risk_compiled: list[CompiledRule] = []
     all_diags: list[Diagnostic] = []
 
     profile = DecisionProfile.signal
@@ -199,6 +224,29 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
         if not [d for d in all_diags if d.location.file == Path(rs.path)]:
             compiled.extend(compile_source_file(sf))
 
+    if log.risk_rules is not None:
+        for rs in log.risk_rules:
+            if sha256_text(rs.text) != rs.sha256:
+                all_diags.append(
+                    diag(
+                        code="SD543",
+                        severity=Severity.error,
+                        message=f"Rule snapshot sha256 mismatch for {rs.path!r}",
+                        file=log_path,
+                    )
+                )
+                continue
+
+            sf, parse_diags = parse_source(rs.text, file=Path(rs.path))
+            all_diags.extend(parse_diags)
+            if sf is None or parse_diags:
+                continue
+
+            all_diags.extend(typecheck_source_file(sf))
+            all_diags.extend(lint_text(rs.text, profile=DecisionProfile.risk, file=Path(rs.path)))
+            if not [d for d in all_diags if d.location.file == Path(rs.path)]:
+                risk_compiled.extend(compile_source_file(sf))
+
     if all_diags:
         return None, sorted(all_diags)
 
@@ -217,7 +265,11 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
 
     engine_version = engine_version_override or log.engine_version
     try:
-        return evaluate_underlying(compiled, list(log.events), profile=profile, engine_version=engine_version), []
+        rr = risk_compiled if log.risk_rules is not None else None
+        return (
+            evaluate_underlying(compiled, list(log.events), profile=profile, risk_rules=rr, engine_version=engine_version),
+            [],
+        )
     except EvalError as e:
         return None, [
             diag(

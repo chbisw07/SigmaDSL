@@ -26,7 +26,7 @@ Establish a stable “product contract” boundary for downstream consumers:
   - `intent`: `declare_intent`, `cancel_intent`, `annotate`
   - `risk`: `constrain_max_position`, `block`, `annotate`
 - **Stable decision schema:**
-  - decision envelope: `schema="sigmadsl.decision"`, `schema_version="1.0-a"`
+  - decision envelope: `schema="sigmadsl.decision"` (v1.0-A introduced `1.0-a`; v1.0-B bumps to `1.0-b` for enforcement fields)
   - per-decision `trace_ref={event_index, rule_name, action_index}` for stable linkage to trace
   - `kind` widened to include `intent` and `constraint` (in addition to `signal` and `annotation`)
 - **Backward-compat:**
@@ -71,3 +71,50 @@ sigmadsl run --profile risk --input tests/fixtures/run/bars_basic.csv --rules te
 - intent outputs are not converted into plans (later)
 - no in-language `profile` header yet (CLI-only in v1.0-A)
 
+---
+
+## Sprint v1.0-B — Risk constraints v1
+
+### Sprint goal
+
+Add a separate deterministic risk phase that can block prior decisions in a fail-closed way:
+
+- evaluate a risk rule pack after primary decision generation
+- apply constraint decisions to prior decisions deterministically
+- represent blocked outcomes in the stable decision schema
+- add runnable `examples/risk_rules/` and replayable goldens
+
+### Design choices (v1.0-B)
+
+- **Separate risk pack**:
+  - primary rules are evaluated under `--profile {signal|intent}`
+  - risk rules are evaluated from `--risk-rules <path>` under profile `risk`
+- **Fail-closed constraint semantics (sprint-scoped)**:
+  - `block(reason=...)` blocks all primary decisions at the same event index
+  - `constrain_max_position(quantity=..., ...)` blocks `declare_intent(...)` when `quantity` exceeds the max
+  - unknown/unsupported constraint kinds are treated as block-all
+- **Stable schema integration**:
+  - every decision includes `enforcement={status, blocked_by}`
+  - blocked decisions list the constraint decision ids in `blocked_by`
+- **Replay**:
+  - run logs embed the risk rule sources under `risk.rules.files[]`
+  - `replay` reproduces risk-applied outputs deterministically
+
+### Commands to run
+
+Run the full test suite:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Manual demo (signal blocked):
+
+```bash
+sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --rules examples/risk_rules/packs/signal_always --risk-rules examples/risk_rules/packs/risk_block_close
+```
+
+### Known limitations (intentionally deferred)
+
+- no portfolio-wide or stateful risk enforcement (event-local only)
+- no plan generation or routing

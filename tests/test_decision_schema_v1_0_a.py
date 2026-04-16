@@ -27,7 +27,7 @@ def test_signal_decisions_have_stable_v1_schema_envelope_and_legacy_fields():
     for line in lines:
         d = json.loads(line)
         assert d["schema"] == "sigmadsl.decision"
-        assert d["schema_version"] == "1.0-a"
+        assert d["schema_version"] == "1.0-b"
         assert d["profile"] == "signal"
         assert d["id"].startswith("D")
         assert d["rule_name"]
@@ -38,7 +38,9 @@ def test_signal_decisions_have_stable_v1_schema_envelope_and_legacy_fields():
         assert isinstance(d["trace_ref"]["action_index"], int)
         assert d["verb"] in ("emit_signal", "annotate")
 
+        assert d["enforcement"]["status"] in ("allowed", "blocked")
+        assert isinstance(d["enforcement"]["blocked_by"], list)
+
         # Backward-compat: legacy top-level fields remain present.
         assert "kind" in d
         assert "symbol" in d
-

@@ -8,6 +8,15 @@ from .runtime_models import dec_str
 
 
 @dataclass(frozen=True)
+class DecisionEnforcement:
+    status: str  # "allowed" | "blocked"
+    blocked_by: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict:
+        return {"status": self.status, "blocked_by": list(self.blocked_by)}
+
+
+@dataclass(frozen=True)
 class Decision:
     id: str
     kind: str  # "signal" | "annotation" | "intent" | "constraint" (v1.0-A)
@@ -19,6 +28,7 @@ class Decision:
     event_index: int
     timestamp: str
     trace_ref: dict  # stable linkage to trace location
+    enforcement: DecisionEnforcement
 
     def to_dict(self) -> dict:
         return {
@@ -34,6 +44,7 @@ class Decision:
             "event_index": self.event_index,
             "timestamp": self.timestamp,
             "trace_ref": self.trace_ref,
+            "enforcement": self.enforcement.to_dict(),
         }
 
 

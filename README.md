@@ -127,6 +127,16 @@ sigmadsl run --profile signal --input tests/fixtures/run/bars_basic.csv --rules 
 
 See `docs/decision_profiles.md` for the allowlists and the stable decision output schema.
 
+## Risk constraints (Sprint v1.0-B)
+
+Apply a separate risk pack to block/limit decisions deterministically:
+
+```bash
+sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --rules examples/risk_rules/packs/signal_always --risk-rules examples/risk_rules/packs/risk_block_close
+```
+
+See `docs/risk_constraints.md` and `examples/risk_rules/`.
+
 ## Supported syntax (Sprint 0.1-A)
 
 Minimal authoring subset aligned to `docs/DSL_v0.md` (Chapter 11 grammar sketch):

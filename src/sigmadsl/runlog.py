@@ -11,8 +11,8 @@ from .runtime_models import Bar, UnderlyingEvent, dec, dec_str
 
 
 RUNLOG_SCHEMA = "sigmadsl.runlog"
-RUNLOG_SCHEMA_VERSION = "1.0-a"
-SUPPORTED_RUNLOG_SCHEMA_VERSIONS = ("0.4-a", "0.5-a", "1.0-a")
+RUNLOG_SCHEMA_VERSION = "1.0-b"
+SUPPORTED_RUNLOG_SCHEMA_VERSIONS = ("0.4-a", "0.5-a", "1.0-a", "1.0-b")
 
 
 @dataclass(frozen=True)
@@ -128,6 +128,7 @@ class RunLog:
     engine_version: str
     profile: str | None
     rules: tuple[RuleSource, ...]
+    risk_rules: tuple[RuleSource, ...] | None
     input_csv: CsvSourceMeta
     events: tuple[UnderlyingEvent, ...]
     indicators: IndicatorsMeta | None = None
@@ -145,6 +146,8 @@ class RunLog:
                 "events": [underlying_event_to_dict(e) for e in self.events],
             },
         }
+        if self.risk_rules is not None:
+            out["risk"] = {"rules": {"files": [r.to_dict() for r in self.risk_rules]}}
         if self.indicators is not None:
             out["indicators"] = self.indicators.to_dict()
         return out
@@ -199,6 +202,14 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
         events_d = d["input"]["events"]
     except Exception as e:
         return None, [diag(code="SD542", severity=Severity.error, message=f"Missing required log fields: {e}", file=path)]
+
+    risk_rules: list[RuleSource] | None = None
+    if "risk" in d:
+        try:
+            risk_files = d["risk"]["rules"]["files"]
+            risk_rules = [RuleSource(path=str(rf["path"]), sha256=str(rf["sha256"]), text=str(rf["text"])) for rf in risk_files]
+        except Exception as e:
+            return None, [diag(code="SD542", severity=Severity.error, message=f"Malformed risk section in log: {e}", file=path)]
 
     indicators_meta: IndicatorsMeta | None = None
     if "indicators" in d:
@@ -255,6 +266,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
             engine_version=engine_version,
             profile=str(profile) if profile is not None else None,
             rules=tuple(rules),
+            risk_rules=tuple(risk_rules) if risk_rules is not None else None,
             input_csv=csv_meta,
             events=tuple(events),
             indicators=indicators_meta,
