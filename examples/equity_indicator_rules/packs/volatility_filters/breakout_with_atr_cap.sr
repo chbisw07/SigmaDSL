@@ -1,0 +1,4 @@
+rule "Breakout (5-bar) with ATR cap" in underlying:
+    when bar.close == highest(close, 5) and atr(5) < 12:
+        then emit_signal(kind="BREAKOUT", reason="new_5bar_high_lowvol")
+

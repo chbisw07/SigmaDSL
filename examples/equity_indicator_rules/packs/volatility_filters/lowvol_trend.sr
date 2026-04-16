@@ -1,0 +1,4 @@
+rule "Low-vol EMA trend" in underlying:
+    when ema(close, 5) > ema(close, 10) and atr(5) < 8:
+        then emit_signal(kind="LOWVOL_TREND", reason="ema_trend_and_low_atr")
+

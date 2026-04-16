@@ -1,0 +1,8 @@
+rule "RSI Oversold (5)" in underlying:
+    when rsi(close, 5) < 30%:
+        then emit_signal(kind="RSI_OVERSOLD", reason="rsi_lt_30pct")
+
+rule "RSI Overbought (5)" in underlying:
+    when rsi(close, 5) > 70%:
+        then emit_signal(kind="RSI_OVERBOUGHT", reason="rsi_gt_70pct")
+

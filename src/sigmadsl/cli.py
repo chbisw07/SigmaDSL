@@ -7,6 +7,7 @@ import typer
 from .diagnostics import Diagnostic
 from .diffing import diff_run_logs
 from .linting import lint_paths
+from .profile import profile_paths
 from .explain import explain_decision, explain_rule_at_event
 from .runner import (
     decision_jsonl_lines,
@@ -195,3 +196,41 @@ def diff(
     assert summary is not None
     typer.echo(summary.to_text().rstrip("\n"))
     raise typer.Exit(code=0 if summary.equal else 1)
+
+
+@app.command()
+def profile(
+    path: Path = typer.Argument(..., exists=True, readable=True),
+    format: str = typer.Option("json", "--format", help="Output format: json or text"),
+):
+    """
+    Summarize which indicators/functions/verbs a rule pack uses (Sprint 0.5-B).
+    """
+
+    summary, diags = profile_paths(path)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=1)
+    assert summary is not None
+
+    fmt = format.strip().lower()
+    if fmt not in ("json", "text"):
+        typer.echo("Invalid --format (expected 'json' or 'text')", err=True)
+        raise typer.Exit(code=2)
+
+    if fmt == "json":
+        typer.echo(summary.to_json().rstrip("\n"))
+        return
+
+    # text (stable, minimal)
+    o = summary.to_dict()
+    typer.echo("Profile")
+    typer.echo(f"- files: {len(o['files'])}")
+    typer.echo(f"- rule_count: {o['rule_count']}")
+    typer.echo(f"- contexts: {', '.join(o['contexts']) or '<none>'}")
+    typer.echo(f"- verbs: {', '.join(o['verbs']) or '<none>'}")
+    typer.echo(f"- functions: {', '.join(o['functions']) or '<none>'}")
+    inds = o["indicators"]
+    typer.echo(f"- indicator_registry_version: {inds['registry_version']}")
+    typer.echo(f"- indicators_referenced: {', '.join(inds['referenced']) or '<none>'}")

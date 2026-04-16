@@ -1,7 +1,7 @@
 # Sigma Rule DSL — Specification Snapshot (`dsl_v0.5.md`)
 
 Document ID: `dsl_v0.5`  
-Status: Implemented snapshot (v0.5-A: indicator registry + deterministic window semantics)  
+Status: Implemented snapshot (v0.5: indicators + sample strategies)  
 Last updated: 2026-04-16  
 Related source documents (mandatory):
 - `docs/dsl.md` — thesis backbone + architecture boundaries (source of truth)
@@ -12,11 +12,12 @@ Related source documents (mandatory):
 ## Snapshot note (v0.5)
 
 This document is a **full copy-forward** of `docs/dsl_v0.4.md` with **only the referenced v0.5 chapters updated**
-to reflect the implemented Sprint 0.5-A indicator registry + deterministic indicator semantics.
+to reflect implemented v0.5 behavior (Sprints 0.5-A and 0.5-B).
 
 Updated sections in this snapshot:
 - Chapter 6 (run logs: indicator pins added, schema bumped)
 - Chapter 16 (indicator definitions + window/alignment + rounding policy)
+- Chapter 21 (CLI: `profile` pack introspection)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -1387,7 +1388,7 @@ Planned commands (shipped incrementally; see `docs/dsl_proj_plan.md`):
 - `report` (v1.0)
 - `plan` (v2.0)
 
-v0.4-A concretizes the replay surface:
+v0.4-A introduces the replay surface (and v0.5 updates the run log schema):
 
 - `run --log-out runlog.json` writes a self-contained run log (schema `sigmadsl.runlog` `0.5-a`)
 - `replay --log runlog.json` re-evaluates from embedded snapshots and re-emits decision output deterministically
@@ -1397,6 +1398,13 @@ v0.4-B concretizes the debugging surface:
 - `explain --decision-id D0003 ...` prints a stable “why it fired” summary + the emitting trace record
 - `explain --rule "..." --event-index N ...` prints a stable “why it did not fire” view using the per-rule trace at that event
 - `diff run_a.json run_b.json` compares two run logs deterministically (decision counts + first divergence)
+
+v0.5-B adds lightweight pack introspection:
+
+- `profile path/to/rules/` prints a stable summary of:
+  - which indicators are referenced (pinned versions),
+  - which functions are called,
+  - which verbs are used.
 
 ## 21.2 Diagnostics requirements
 

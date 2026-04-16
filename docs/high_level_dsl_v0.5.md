@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v0.5
 
-Status: Implemented (indicator registry + deterministic indicator semantics).  
-Scope: **Sprint 0.5-A** (“Indicator registry + caching”).
+Status: Implemented (indicator registry + sample strategies).  
+Scope: **Sprint 0.5-A** (“Indicator registry + caching”) + **Sprint 0.5-B** (“Indicator-based sample strategies”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -22,6 +22,12 @@ v0.5 introduces the first deterministic indicator surface:
 - deterministic **window/alignment semantics** for indicator computation
 - deterministic **rounding policy** for indicator outputs (numeric goldens protect it)
 - per-run deterministic caching to avoid redundant recomputation (does not change semantics)
+
+Sprint 0.5-B productizes this foundation with:
+
+- realistic indicator-based example packs + datasets + expected outputs
+- an indicator cookbook that matches actual implementation
+- a lightweight pack introspection command (`sigmadsl profile`)
 
 ## Supported indicator calls (v0.5-A)
 
@@ -49,6 +55,27 @@ Indicators are called as pure expression functions inside `when` conditions:
 
 Replay remains self-contained and deterministic for the current equity/bar runner.
 
+## Indicator sample strategies (v0.5-B)
+
+Runnable indicator examples live in:
+
+- `examples/equity_indicator_rules/`
+  - `packs/` (rule packs)
+  - `data/` (small CSV bar series)
+  - `expected/` (expected `sigmadsl run` outputs)
+
+These packs are used by tests to prove:
+- deterministic outputs across repeated runs
+- run output == replay output for indicator-driven packs
+
+## Pack introspection (v0.5-B)
+
+`sigmadsl profile` summarizes which indicators/verbs/functions a pack references:
+
+```bash
+sigmadsl profile examples/equity_indicator_rules/packs/trend_following/
+```
+
 ## Known limitations / deferred items
 
 - single-symbol runner only (multi-symbol is deferred)
@@ -61,4 +88,5 @@ Replay remains self-contained and deterministic for the current equity/bar runne
 - added deterministic indicator registry + per-run caching
 - added EMA/RSI/ATR/VWAP with pinned semantics + numeric goldens
 - bumped run log schema to include indicator pin metadata (`sigmadsl.runlog` `0.5-a`)
-
+- added indicator-based sample strategies + datasets + expected outputs
+- added indicator cookbook + `sigmadsl profile`

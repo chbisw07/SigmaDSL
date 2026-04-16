@@ -8,7 +8,6 @@
       "vwap@1"
     ],
     "referenced": [
-      "atr@1",
       "ema@1",
       "rsi@1",
       "vwap@1"
@@ -26,18 +25,18 @@
         "close",
         "volume"
       ],
-      "path": "tests/fixtures/run/bars_basic.csv",
-      "row_count": 3,
-      "sha256": "01d93d05a76fd3b276be0974b63aa88c3001df90bf0f0dd190decd38cdcfcb74"
+      "path": "examples/equity_indicator_rules/data/bars_trend.csv",
+      "row_count": 8,
+      "sha256": "21d050ac89fddcf3c20c72f686c78de1668b3b49fc632178537a6b73cc869ca9"
     },
     "events": [
       {
         "bar": {
-          "close": "99",
-          "high": "100",
-          "low": "98",
+          "close": "100",
+          "high": "101",
+          "low": "99",
           "open": "100",
-          "timestamp": "2026-01-01T09:15:00",
+          "timestamp": "2026-01-03T09:15:00",
           "volume": "1000"
         },
         "data_is_fresh": true,
@@ -48,11 +47,11 @@
       },
       {
         "bar": {
-          "close": "101",
-          "high": "102",
-          "low": "99",
-          "open": "99",
-          "timestamp": "2026-01-01T09:20:00",
+          "close": "102",
+          "high": "103",
+          "low": "100",
+          "open": "100",
+          "timestamp": "2026-01-03T09:20:00",
           "volume": "1100"
         },
         "data_is_fresh": true,
@@ -64,14 +63,89 @@
       {
         "bar": {
           "close": "103",
-          "high": "105",
-          "low": "100",
-          "open": "101",
-          "timestamp": "2026-01-01T09:25:00",
-          "volume": "1200"
+          "high": "104",
+          "low": "101",
+          "open": "102",
+          "timestamp": "2026-01-03T09:25:00",
+          "volume": "900"
         },
         "data_is_fresh": true,
         "index": 2,
+        "session_is_regular": true,
+        "symbol": "TCS",
+        "underlying_return_5m": null
+      },
+      {
+        "bar": {
+          "close": "104",
+          "high": "105",
+          "low": "102",
+          "open": "103",
+          "timestamp": "2026-01-03T09:30:00",
+          "volume": "1200"
+        },
+        "data_is_fresh": true,
+        "index": 3,
+        "session_is_regular": true,
+        "symbol": "TCS",
+        "underlying_return_5m": null
+      },
+      {
+        "bar": {
+          "close": "105",
+          "high": "106",
+          "low": "103",
+          "open": "104",
+          "timestamp": "2026-01-03T09:35:00",
+          "volume": "1300"
+        },
+        "data_is_fresh": true,
+        "index": 4,
+        "session_is_regular": true,
+        "symbol": "TCS",
+        "underlying_return_5m": null
+      },
+      {
+        "bar": {
+          "close": "104",
+          "high": "106",
+          "low": "103",
+          "open": "105",
+          "timestamp": "2026-01-03T09:40:00",
+          "volume": "1250"
+        },
+        "data_is_fresh": true,
+        "index": 5,
+        "session_is_regular": true,
+        "symbol": "TCS",
+        "underlying_return_5m": null
+      },
+      {
+        "bar": {
+          "close": "106",
+          "high": "107",
+          "low": "104",
+          "open": "104",
+          "timestamp": "2026-01-03T09:45:00",
+          "volume": "1400"
+        },
+        "data_is_fresh": true,
+        "index": 6,
+        "session_is_regular": true,
+        "symbol": "TCS",
+        "underlying_return_5m": null
+      },
+      {
+        "bar": {
+          "close": "108",
+          "high": "109",
+          "low": "105",
+          "open": "106",
+          "timestamp": "2026-01-03T09:50:00",
+          "volume": "1500"
+        },
+        "data_is_fresh": true,
+        "index": 7,
         "session_is_regular": true,
         "symbol": "TCS",
         "underlying_return_5m": null
@@ -81,9 +155,19 @@
   "rules": {
     "files": [
       {
-        "path": "tests/fixtures/eval/rules_indicators.sr",
-        "sha256": "966e1ea28ad80ed327f6a6bb4de93b61a9b0ca453aff2ce299e02ddd75f9bb92",
-        "text": "rule \"EQ: Trend Up (EMA/RSI)\" in underlying:\n    when bar.close > ema(close, 3) and rsi(close, 3) > 50%:\n        then emit_signal(kind=\"TREND_UP\", reason=\"close_gt_ema3_and_rsi_gt_50pct\")\n\nrule \"EQ: ATR High\" in underlying:\n    when atr(3) > 3:\n        then annotate(note=\"atr_gt_3\")\n\nrule \"EQ: Above VWAP(2)\" in underlying:\n    when bar.close > vwap(2):\n        then emit_signal(kind=\"ABOVE_VWAP2\", reason=\"close_gt_vwap2\")\n\n"
+        "path": "examples/equity_indicator_rules/packs/trend_following/ema_trend.sr",
+        "sha256": "90683cbc5454eab8ee820023a13fc79a87226616ce61ca6a5d32ce6730939686",
+        "text": "rule \"EMA Trend (5>10)\" in underlying:\n    when ema(close, 5) > ema(close, 10) and bar.close > ema(close, 10):\n        then emit_signal(kind=\"EMA_TREND_UP\", reason=\"ema5_gt_ema10\")\n\n"
+      },
+      {
+        "path": "examples/equity_indicator_rules/packs/trend_following/rsi_momentum_note.sr",
+        "sha256": "6951500e8ee10ba38357048d578970b5863f2ac97d5207cb10c6f8f4ca123de2",
+        "text": "rule \"RSI momentum note (7)\" in underlying:\n    when rsi(close, 7) > 60%:\n        then annotate(note=\"rsi_gt_60pct\")\n\n"
+      },
+      {
+        "path": "examples/equity_indicator_rules/packs/trend_following/vwap_bias.sr",
+        "sha256": "3b9c3cd482b4c23636563c93eac7d2ff3f92235587931c0a00ba7b604c18e416",
+        "text": "rule \"Above VWAP(5)\" in underlying:\n    when bar.close > vwap(5):\n        then emit_signal(kind=\"ABOVE_VWAP5\", reason=\"close_gt_vwap5\")\n\n"
       }
     ]
   },

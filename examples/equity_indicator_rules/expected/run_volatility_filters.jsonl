@@ -1,0 +1,8 @@
+{"event_index": 0, "id": "D0001", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:15:00", "verb": "annotate"}
+{"event_index": 1, "id": "D0002", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:20:00", "verb": "annotate"}
+{"event_index": 2, "id": "D0003", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:25:00", "verb": "annotate"}
+{"event_index": 3, "id": "D0004", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:30:00", "verb": "annotate"}
+{"event_index": 4, "id": "D0005", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:35:00", "verb": "annotate"}
+{"event_index": 5, "id": "D0006", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:40:00", "verb": "annotate"}
+{"event_index": 6, "id": "D0007", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:45:00", "verb": "annotate"}
+{"event_index": 7, "id": "D0008", "kind": "annotation", "note": "atr_gt_10", "rule_name": "ATR high-vol annotation (5)", "symbol": "RELIANCE", "timestamp": "2026-01-05T09:50:00", "verb": "annotate"}

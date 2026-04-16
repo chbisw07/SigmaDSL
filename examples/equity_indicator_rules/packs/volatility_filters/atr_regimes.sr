@@ -1,0 +1,8 @@
+rule "ATR high-vol annotation (5)" in underlying:
+    when atr(5) > 10:
+        then annotate(note="atr_gt_10")
+
+rule "ATR low-vol annotation (5)" in underlying:
+    when atr(5) < 6:
+        then annotate(note="atr_lt_6")
+

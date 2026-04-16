@@ -199,3 +199,25 @@ rule "EQ: Trend Up" in underlying:
     when bar.close > ema(close, 20) and rsi(close, 14) > 60%:
         then emit_signal(kind="TREND_UP", reason="ema20_and_rsi14")
 ```
+
+## Indicator sample packs (v0.5-B)
+
+Runnable example packs live under:
+
+- `examples/equity_indicator_rules/`
+
+Validate + lint:
+
+```bash
+sigmadsl validate examples/equity_indicator_rules/
+sigmadsl lint examples/equity_indicator_rules/
+```
+
+Run a pack and compare output:
+
+```bash
+sigmadsl run --input examples/equity_indicator_rules/data/bars_trend.csv --rules examples/equity_indicator_rules/packs/trend_following/ > out.jsonl
+diff -u examples/equity_indicator_rules/expected/run_trend_following.jsonl out.jsonl
+```
+
+See `docs/indicator_cookbook.md` for worked patterns and runnable commands.

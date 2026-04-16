@@ -1,0 +1,4 @@
+rule "Mean-revert long (below VWAP3)" in underlying:
+    when bar.close < vwap(3) and rsi(close, 5) < 40%:
+        then emit_signal(kind="MEAN_REVERT_LONG", reason="below_vwap3_and_rsi_lt_40pct")
+

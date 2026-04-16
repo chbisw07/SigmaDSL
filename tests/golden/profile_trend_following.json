@@ -1,0 +1,34 @@
+{
+  "contexts": [
+    "underlying"
+  ],
+  "files": [
+    "examples/equity_indicator_rules/packs/trend_following/ema_trend.sr",
+    "examples/equity_indicator_rules/packs/trend_following/rsi_momentum_note.sr",
+    "examples/equity_indicator_rules/packs/trend_following/vwap_bias.sr"
+  ],
+  "functions": [
+    "ema",
+    "rsi",
+    "vwap"
+  ],
+  "indicators": {
+    "pinned": [
+      "atr@1",
+      "ema@1",
+      "rsi@1",
+      "vwap@1"
+    ],
+    "referenced": [
+      "ema@1",
+      "rsi@1",
+      "vwap@1"
+    ],
+    "registry_version": "0.5-a"
+  },
+  "rule_count": 3,
+  "verbs": [
+    "annotate",
+    "emit_signal"
+  ]
+}

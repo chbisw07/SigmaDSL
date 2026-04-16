@@ -1,0 +1,4 @@
+rule "EMA Trend (5>10)" in underlying:
+    when ema(close, 5) > ema(close, 10) and bar.close > ema(close, 10):
+        then emit_signal(kind="EMA_TREND_UP", reason="ema5_gt_ema10")
+

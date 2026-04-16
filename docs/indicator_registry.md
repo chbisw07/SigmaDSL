@@ -8,6 +8,8 @@ Principles:
 - indicator semantics are **version-pinned** (see `docs/dsl_v0.5.md`)
 - indicator outputs are **deterministic** and protected by numeric goldens
 
+See also: `docs/indicator_cookbook.md` for worked patterns and runnable examples.
+
 ## Supported indicators
 
 All indicators are called as expression functions in `when` conditions.
@@ -52,4 +54,3 @@ rule "EQ: Trend Up" in underlying:
     when bar.close > ema(close, 20) and rsi(close, 14) > 60%:
         then emit_signal(kind="TREND_UP", reason="ema20_and_rsi14")
 ```
-

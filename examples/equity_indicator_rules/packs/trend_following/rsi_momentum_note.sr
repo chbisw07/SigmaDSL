@@ -1,0 +1,4 @@
+rule "RSI momentum note (7)" in underlying:
+    when rsi(close, 7) > 60%:
+        then annotate(note="rsi_gt_60pct")
+

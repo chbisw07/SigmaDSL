@@ -103,3 +103,72 @@ sigmadsl replay --log runlog.json
 - no explicit missing/unknown three-valued logic
 - no imports/packaging of indicator libraries (Phase D / later)
 
+---
+
+## Sprint 0.5-B — Indicator-based sample strategies
+
+### Sprint goal
+
+Turn the v0.5-A indicator foundation into a user-runnable product slice:
+
+- realistic indicator-based sample packs
+- small CSV datasets and deterministic expected outputs
+- end-to-end tests proving indicator-driven run/replay determinism
+- practical documentation (cookbook)
+- lightweight pack introspection (`sigmadsl profile`)
+
+### What was implemented
+
+- **Indicator sample packs**: `examples/equity_indicator_rules/`
+  - packs:
+    - `packs/trend_following/` (EMA + VWAP + RSI note)
+    - `packs/mean_reversion/` (RSI thresholds + VWAP3 reversion)
+    - `packs/volatility_filters/` (ATR regimes + ATR-capped breakout)
+  - datasets: `examples/equity_indicator_rules/data/*.csv`
+  - expected outputs: `examples/equity_indicator_rules/expected/*.jsonl`
+- **End-to-end tests**:
+  - validate/lint the example directory
+  - run packs and compare stdout to expected JSONL
+  - replay equivalence on an indicator-driven pack
+  - `tests/test_examples_indicator_rules_pack.py`
+- **Pack introspection command**: `sigmadsl profile`
+  - summarizes:
+    - `indicators.referenced` (pinned keys like `ema@1`)
+    - expression function calls
+    - verbs used
+  - deterministic JSON output suitable for golden tests
+  - `src/sigmadsl/profile.py`
+- **Documentation**:
+  - cookbook: `docs/indicator_cookbook.md`
+  - updated high-level v0.5 summary: `docs/high_level_dsl_v0.5.md`
+  - updated quickstart and README to point to the sample pack
+
+### Commands to run
+
+Validate and run the indicator examples:
+
+```bash
+sigmadsl validate examples/equity_indicator_rules/
+sigmadsl lint examples/equity_indicator_rules/
+sigmadsl run --input examples/equity_indicator_rules/data/bars_trend.csv --rules examples/equity_indicator_rules/packs/trend_following/
+```
+
+Profile a pack:
+
+```bash
+sigmadsl profile examples/equity_indicator_rules/packs/trend_following/
+```
+
+Replay equivalence:
+
+```bash
+sigmadsl run --input examples/equity_indicator_rules/data/bars_trend.csv --rules examples/equity_indicator_rules/packs/trend_following/ --log-out runlog.json > out.jsonl
+sigmadsl replay --log runlog.json > replay.jsonl
+diff -u out.jsonl replay.jsonl
+```
+
+### Known limitations (intentionally deferred)
+
+- these are sample strategies only; no position management or execution planning exists
+- indicators remain limited to EMA/RSI/ATR/VWAP
+- multi-symbol evaluation remains deferred

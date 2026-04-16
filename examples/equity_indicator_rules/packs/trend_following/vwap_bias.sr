@@ -1,0 +1,4 @@
+rule "Above VWAP(5)" in underlying:
+    when bar.close > vwap(5):
+        then emit_signal(kind="ABOVE_VWAP5", reason="close_gt_vwap5")
+

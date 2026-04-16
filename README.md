@@ -59,6 +59,15 @@ Starter sample pack:
 sigmadsl validate examples/equity_min_rules/
 ```
 
+## Indicator examples (Sprint 0.5-B)
+
+Indicator-based sample strategies + datasets + expected outputs:
+
+```bash
+sigmadsl validate examples/equity_indicator_rules/
+sigmadsl run --input examples/equity_indicator_rules/data/bars_trend.csv --rules examples/equity_indicator_rules/packs/trend_following/
+```
+
 ## Run (Sprint 0.3-B)
 
 Run a rules file/directory against a minimal bars CSV (single symbol):
