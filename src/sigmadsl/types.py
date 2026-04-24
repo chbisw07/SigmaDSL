@@ -18,11 +18,16 @@ INT = Type("Int")
 DECIMAL = Type("Decimal")
 TIMESTAMP = Type("Timestamp")
 DURATION = Type("Duration")
+DATE = Type("Date")
 
 # Domain types (v0.2 target subset)
 PRICE = Type("Price")
 QUANTITY = Type("Quantity")
 PERCENT = Type("Percent")
+
+# Options (v1.1-A target subset)
+OPTION_CONTRACT = Type("OptionContract")
+OPTION_ID = Type("OptionId")
 
 # Internal helper types
 UNKNOWN = Type("Unknown")
@@ -68,4 +73,3 @@ def type_matches(expected: Type, got: Type) -> bool:
         return True
     # Allow Decimal where Int is expected? (conservative: no)
     return False
-

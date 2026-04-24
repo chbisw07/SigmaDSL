@@ -292,3 +292,13 @@ sigmadsl report --input decisions.jsonl
 
 - `docs/equity_product_quickstart.md`
 - `docs/faq.md`
+
+## Options contract model (v1.1-A)
+
+v1.1-A introduces option contract identifiers and option snapshot types, and enables **typed validation** for `in option:` rule files.
+
+See:
+- `docs/options_contract_context.md`
+- `docs/high_level_dsl_v1.1.md`
+
+Note: executing `option` context rules on option snapshot CSV inputs is deferred to v1.1-B.

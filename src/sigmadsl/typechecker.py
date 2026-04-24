@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import ast
-from .builtins import function_names, underlying_env_types, verb_signatures
+from .builtins import function_names, option_env_types, underlying_env_types, verb_signatures
 from .diagnostics import Diagnostic, Severity, diag
 from .expr import (
     Attribute,
@@ -54,12 +54,12 @@ def typecheck_source_file(source_file: ast.SourceFile) -> list[Diagnostic]:
     file = source_file.path
 
     for rule in source_file.rules:
-        if rule.context != "underlying":
+        if rule.context not in ("underlying", "option"):
             diags.append(
                 diag(
                     code="SD303",
                     severity=Severity.error,
-                    message=f"Unsupported context for v0.2 type checking: {rule.context!r} (expected 'underlying')",
+                    message=f"Unsupported context for v0.2 type checking: {rule.context!r} (expected 'underlying' or 'option')",
                     file=file,
                     line=rule.span.line,
                     column=rule.span.column,
@@ -67,7 +67,8 @@ def typecheck_source_file(source_file: ast.SourceFile) -> list[Diagnostic]:
             )
             continue
 
-        env = _Env(file=file, context=rule.context, names=underlying_env_types())
+        names = underlying_env_types() if rule.context == "underlying" else option_env_types()
+        env = _Env(file=file, context=rule.context, names=names)
 
         for branch in rule.branches:
             if branch.condition is not None:

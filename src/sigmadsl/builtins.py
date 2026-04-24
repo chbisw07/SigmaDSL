@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from .types import (
     BOOL,
     DECIMAL,
+    DATE,
     DURATION,
     INT,
     PRICE,
@@ -54,6 +55,34 @@ def underlying_env_types() -> dict[str, Type]:
         "session.is_regular": BOOL,
         "data.is_fresh": BOOL,
         # used in examples (PROVISIONAL)
+        "underlying.return_5m": PERCENT,
+    }
+
+
+def option_env_types() -> dict[str, Type]:
+    """
+    Minimal field/type environment for `option` context for v1.1-A.
+
+    Source: docs/DSL_v0.md Chapter 12.2.2 (intended option fields; v1.1+).
+
+    Note: this is type checking only; runtime `run` support for option snapshots is delivered later (v1.1-B).
+    """
+
+    return {
+        # option contract identity fields
+        "option.strike": PRICE,
+        "option.expiry": DATE,
+        "option.type": STRING,  # canonical right is CALL/PUT; represented as String in DSL for now
+        # option snapshot fields (atomic)
+        "option.iv": PERCENT,
+        "option.delta": DECIMAL,
+        "option.gamma": DECIMAL,
+        "option.theta": DECIMAL,
+        "option.vega": DECIMAL,
+        # guards
+        "session.is_regular": BOOL,
+        "data.is_fresh": BOOL,
+        # allow limited underlying linkage fields used in deferred examples
         "underlying.return_5m": PERCENT,
     }
 

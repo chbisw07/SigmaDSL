@@ -1,0 +1,3 @@
+rule "OPT: IV expansion (typed only)" in option:
+    when data.is_fresh and option.iv > 20% and abs(underlying.return_5m) < 0.2%:
+        then emit_signal(kind="IV_EXPANSION", reason="iv_up_underlying_flat")
