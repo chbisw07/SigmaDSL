@@ -8,7 +8,7 @@ This repository currently implements:
 - **Phase B** through **Sprint 0.4-B** (CSV runner + JSON decisions + replay + diff + explain, verified via fixtures/goldens)
 - **Phase C** through **Sprint 0.5-A** (indicator registry + deterministic windows + numeric goldens)
 - **Phase E** through **Sprint v1.0-C** (profiles + risk gating + report + UX/docs polish)
-- **Phase F** through **Sprint v1.1-A** (option contract model + canonical ids + snapshot types; typed validation only)
+- **Phase F** through **Sprint v1.1-B** (option contract model + atomic snapshot runner; `in option:` rules runnable via `--context option`)
 
 ## DSL version docs
 
@@ -82,6 +82,12 @@ Run a rules file/directory against a minimal bars CSV (single symbol):
 
 ```bash
 sigmadsl run --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/eval/rules_basic.sr
+```
+
+Run option-context rules against an atomic option snapshot CSV (Sprint v1.1-B):
+
+```bash
+sigmadsl run --context option --input examples/option_context_rules/data/options_basic.csv --rules examples/option_context_rules/option_signals.sr
 ```
 
 Explain a single decision:
@@ -173,4 +179,4 @@ Type checking is implemented in **Sprint 0.2-A** for a minimal set of types/oper
 
 v0.3-A introduces a minimal deterministic evaluator + trace as a library surface (see `tests/test_evaluator_trace.py`).
 
-Not implemented yet (intentionally): publish/install workflows, registry support, broad indicator catalog, options/chain, planning/risk, multi-symbol evaluation.
+Not implemented yet (intentionally): publish/install workflows, registry support, broad indicator catalog, option chain context, planning/risk, multi-symbol evaluation.

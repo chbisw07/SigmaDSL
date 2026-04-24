@@ -76,3 +76,37 @@ def test_cli_replay_rejects_wrong_schema(tmp_path: Path):
     res = runner.invoke(app, ["replay", "--log", str(p)])
     assert res.exit_code != 0
     assert "SD541" in res.output
+
+
+def test_cli_run_option_log_out_and_replay_equivalence(tmp_path: Path):
+    log_path = tmp_path / "opt_runlog.json"
+
+    run_res = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "option",
+            "--input",
+            "tests/fixtures/options/options_basic.csv",
+            "--rules",
+            "tests/fixtures/options/option_signals.sr",
+            "--log-out",
+            str(log_path),
+        ],
+    )
+    assert run_res.exit_code == 0
+
+    replay_res = runner.invoke(app, ["replay", "--log", str(log_path)])
+    assert replay_res.exit_code == 0
+    assert replay_res.output == run_res.output
+
+    # Basic sanity check of option log schema/content.
+    d = json.loads(log_path.read_text(encoding="utf-8"))
+    assert d["schema"] == "sigmadsl.runlog"
+    assert d["schema_version"] == "1.0-b"
+    assert d["profile"] == "signal"
+    assert d["input"]["kind"] == "option"
+    assert d["input"]["csv"]["path"] == "tests/fixtures/options/options_basic.csv"
+    assert len(d["input"]["events"]) == 3
+    assert d["input"]["events"][0]["snapshot"]["contract_id"].startswith("OPT:")

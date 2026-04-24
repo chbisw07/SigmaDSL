@@ -1,0 +1,1 @@
+tests/fixtures/options/options_stale.csv:2:1 SD734 error: Option snapshot unusable: data_is_fresh=false

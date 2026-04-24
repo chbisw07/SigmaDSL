@@ -64,3 +64,23 @@ def test_cli_explain_blocked_decision_golden():
     assert result.exit_code == 0
     golden = Path("tests/golden/explain_blocked_d0001.txt").read_text(encoding="utf-8")
     assert result.output == golden
+
+
+def test_cli_explain_option_d0001_golden():
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--context",
+            "option",
+            "--decision-id",
+            "D0001",
+            "--input",
+            "tests/fixtures/options/options_basic.csv",
+            "--rules",
+            "tests/fixtures/options/option_signals.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/explain_option_d0001.txt").read_text(encoding="utf-8")
+    assert result.output == golden

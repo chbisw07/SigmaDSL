@@ -1,0 +1,8 @@
+rule "OPT: High IV" in option:
+    when data.is_fresh and option.iv > 20%:
+        then emit_signal(kind="HIGH_IV", reason="iv_gt_20pct")
+
+rule "OPT: Delta Strong" in option:
+    when data.is_fresh and option.delta > 0.6:
+        then annotate(note="delta_gt_0_6")
+

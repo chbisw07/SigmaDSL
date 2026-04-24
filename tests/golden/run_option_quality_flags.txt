@@ -1,0 +1,1 @@
+tests/fixtures/options/options_quality_flags.csv:2:1 SD734 error: Option snapshot unusable: quality_flags_present

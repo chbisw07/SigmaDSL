@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
 from .decision_profiles import DECISION_SCHEMA, DECISION_SCHEMA_VERSION
+from .options_runtime import OptionEvent
+from .options_snapshots import parse_option_snapshot_dict
 from .runtime_models import Bar, UnderlyingEvent, dec, dec_str
 
 
@@ -78,6 +80,17 @@ def underlying_event_to_dict(ev: UnderlyingEvent) -> dict:
     }
 
 
+def option_event_to_dict(ev: OptionEvent) -> dict:
+    return {
+        "symbol": ev.symbol,
+        "index": ev.index,
+        "timestamp": ev.timestamp,
+        "snapshot": ev.snapshot.to_dict(),
+        "session_is_regular": ev.session_is_regular,
+        "underlying_return_5m": dec_str(ev.underlying_return_5m) if ev.underlying_return_5m is not None else None,
+    }
+
+
 def underlying_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[UnderlyingEvent | None, list[Diagnostic]]:
     diags: list[Diagnostic] = []
 
@@ -121,16 +134,57 @@ def underlying_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[Un
     )
 
 
+def option_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[OptionEvent | None, list[Diagnostic]]:
+    diags: list[Diagnostic] = []
+
+    try:
+        symbol = str(d["symbol"])
+        index = int(d["index"])
+        timestamp = str(d["timestamp"])
+        snap_d = d["snapshot"]
+        session_is_regular = bool(d.get("session_is_regular", True))
+        uret = d.get("underlying_return_5m")
+        underlying_return_5m = dec(uret) if uret is not None else None
+    except Exception as e:
+        diags.append(
+            diag(
+                code="SD544",
+                severity=Severity.error,
+                message=f"Malformed option event in run log: {e}",
+                file=file,
+            )
+        )
+        return None, diags
+
+    snap, snap_diags = parse_option_snapshot_dict(snap_d, file=file)
+    diags.extend(snap_diags)
+    if snap is None:
+        return None, sorted(diags)
+
+    return (
+        OptionEvent(
+            symbol=symbol,
+            index=index,
+            timestamp=timestamp,
+            snapshot=snap,
+            session_is_regular=session_is_regular,
+            underlying_return_5m=underlying_return_5m,
+        ),
+        [],
+    )
+
+
 @dataclass(frozen=True)
 class RunLog:
     schema: str
     schema_version: str
     engine_version: str
     profile: str | None
+    input_kind: str  # "underlying" | "option" (v1.1-B adds option)
     rules: tuple[RuleSource, ...]
     risk_rules: tuple[RuleSource, ...] | None
     input_csv: CsvSourceMeta
-    events: tuple[UnderlyingEvent, ...]
+    events: tuple[UnderlyingEvent | OptionEvent, ...]
     indicators: IndicatorsMeta | None = None
 
     def to_dict(self) -> dict:
@@ -142,8 +196,12 @@ class RunLog:
             "decision_schema": {"schema": DECISION_SCHEMA, "schema_version": DECISION_SCHEMA_VERSION},
             "rules": {"files": [r.to_dict() for r in self.rules]},
             "input": {
+                "kind": self.input_kind,
                 "csv": self.input_csv.to_dict(),
-                "events": [underlying_event_to_dict(e) for e in self.events],
+                "events": [
+                    underlying_event_to_dict(e) if self.input_kind == "underlying" else option_event_to_dict(e)  # type: ignore[arg-type]
+                    for e in self.events
+                ],
             },
         }
         if self.risk_rules is not None:
@@ -198,8 +256,9 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
         engine_version = str(d["engine_version"])
         profile = d.get("profile")
         rules_files = d["rules"]["files"]
-        input_csv_d = d["input"]["csv"]
-        events_d = d["input"]["events"]
+        input_d = d["input"]
+        input_csv_d = input_d["csv"]
+        events_d = input_d["events"]
     except Exception as e:
         return None, [diag(code="SD542", severity=Severity.error, message=f"Missing required log fields: {e}", file=path)]
 
@@ -247,12 +306,32 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
     except Exception as e:
         return None, [diag(code="SD542", severity=Severity.error, message=f"Malformed input.csv section in log: {e}", file=path)]
 
-    events: list[UnderlyingEvent] = []
+    input_kind = "underlying"
+    try:
+        k = input_d.get("kind")
+        if isinstance(k, str) and k:
+            input_kind = k
+    except Exception:
+        input_kind = "underlying"
+
+    events: list[UnderlyingEvent | OptionEvent] = []
     diags: list[Diagnostic] = []
     if not isinstance(events_d, list):
         return None, [diag(code="SD544", severity=Severity.error, message="input.events must be a list", file=path)]
     for ev_d in events_d:
-        ev, ev_diags = underlying_event_from_dict(ev_d, file=path)
+        if input_kind == "underlying":
+            ev, ev_diags = underlying_event_from_dict(ev_d, file=path)
+        elif input_kind == "option":
+            ev, ev_diags = option_event_from_dict(ev_d, file=path)
+        else:
+            return None, [
+                diag(
+                    code="SD541",
+                    severity=Severity.error,
+                    message=f"Unsupported input kind in run log: {input_kind!r}",
+                    file=path,
+                )
+            ]
         diags.extend(ev_diags)
         if ev is not None:
             events.append(ev)
@@ -265,6 +344,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
             schema_version=str(schema_version),
             engine_version=engine_version,
             profile=str(profile) if profile is not None else None,
+            input_kind=input_kind,
             rules=tuple(rules),
             risk_rules=tuple(risk_rules) if risk_rules is not None else None,
             input_csv=csv_meta,

@@ -1,6 +1,7 @@
-# Options contract context (v1.1-A)
+# Options contract context (v1.1-A / v1.1-B)
 
-This page describes the **implemented** option contract modeling foundations introduced in **Sprint v1.1-A**.
+This page describes the **implemented** option contract modeling foundations introduced in **Sprint v1.1-A**,
+and the **runtime option context binding** introduced in **Sprint v1.1-B**.
 
 Scope (v1.1-A):
 - option contract identity model
@@ -9,9 +10,13 @@ Scope (v1.1-A):
 - atomic option snapshot input model (quotes + optional greeks)
 - explicit freshness/quality guard fields (no inferred staleness yet)
 
+Scope (v1.1-B):
+- runtime binding for rules authored with `in option:`
+- strict option snapshot CSV input support in `sigmadsl run --context option`
+- deterministic context selection (`--contract-id` if needed)
+- fail-closed snapshot usability checks (`data_is_fresh`, quote presence, and `quality_flags`)
+
 Out of scope (later sprints):
-- running `option` context rules on option CSV inputs (v1.1-B)
-- option context binding / deterministic selection (v1.1-B / v1.1-C)
 - option chain modeling / chain snapshots (v1.2+)
 
 ## Canonical option contract id (implemented)
@@ -73,9 +78,49 @@ This keeps determinism explicit and avoids environment-dependent time logic.
 
 ## CLI status (v1.1-A)
 
-This sprint enables **typed validation** of `option` context rule files, but the runner does not execute them yet.
+v1.1-A enabled **typed validation** of `option` context rule files.
 
 ```bash
 sigmadsl validate tests/fixtures/options/option_ok.sr
 ```
 
+## Running `in option:` rules on snapshot CSV (v1.1-B)
+
+Sprint v1.1-B adds a strict, deterministic option snapshot runner:
+
+```bash
+sigmadsl run --context option --input options.csv --rules path/to/option_rules.sr
+```
+
+If the input CSV contains multiple distinct `contract_id` values, you must select one explicitly:
+
+```bash
+sigmadsl run \
+  --context option \
+  --contract-id OPT:NSE:TCS:2026-01-29:100:CALL:150 \
+  --input options.csv \
+  --rules path/to/option_rules.sr
+```
+
+### CSV columns (v1.1-B)
+
+Required:
+- `contract_id` (canonical id)
+- `timestamp`
+
+Optional (if present, parsed deterministically):
+- identity cross-check: `venue`, `underlying`, `expiry`, `strike`, `right`, `lot`
+- quotes: `bid`, `ask`, `last`, `close`
+- IV/greeks: `iv`, `delta`, `gamma`, `theta`, `vega`
+- sizes: `open_interest`, `volume`
+- guards: `data_is_fresh`, `quality_flags`
+- linkage: `underlying_return_5m`, `session_is_regular`
+
+### Snapshot usability (v1.1-B)
+
+The runner fails closed if any selected-row snapshot is unusable:
+- `data_is_fresh=false`
+- missing quote (no `last`, no `close`, and not both `bid`+`ask`)
+- any non-empty `quality_flags`
+
+This keeps execution deterministic and avoids silently producing decisions from explicitly flagged bad data.

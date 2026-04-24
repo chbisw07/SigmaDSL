@@ -293,12 +293,25 @@ sigmadsl report --input decisions.jsonl
 - `docs/equity_product_quickstart.md`
 - `docs/faq.md`
 
-## Options contract model (v1.1-A)
+## Options contract model + runner (v1.1)
 
-v1.1-A introduces option contract identifiers and option snapshot types, and enables **typed validation** for `in option:` rule files.
+v1.1 introduces:
+- option contract canonical ids + snapshot input model (v1.1-A)
+- runtime option context binding + option CSV runner (v1.1-B)
 
 See:
 - `docs/options_contract_context.md`
 - `docs/high_level_dsl_v1.1.md`
+- `docs/option_context_rules.md`
 
-Note: executing `option` context rules on option snapshot CSV inputs is deferred to v1.1-B.
+Run option rules on snapshot CSV:
+
+```bash
+sigmadsl run --context option --input options.csv --rules path/to/option_rules.sr
+```
+
+If the CSV contains multiple `contract_id` values:
+
+```bash
+sigmadsl run --context option --contract-id OPT:NSE:TCS:2026-01-29:100:CALL:150 --input options.csv --rules path/to/option_rules.sr
+```

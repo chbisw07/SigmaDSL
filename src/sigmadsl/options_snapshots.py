@@ -35,6 +35,7 @@ class OptionSnapshot:
     bid: Decimal | None = None
     ask: Decimal | None = None
     last: Decimal | None = None
+    close: Decimal | None = None
     iv: Decimal | None = None
     delta: Decimal | None = None
     gamma: Decimal | None = None
@@ -52,6 +53,7 @@ class OptionSnapshot:
             "bid": dec_str(self.bid) if self.bid is not None else None,
             "ask": dec_str(self.ask) if self.ask is not None else None,
             "last": dec_str(self.last) if self.last is not None else None,
+            "close": dec_str(self.close) if self.close is not None else None,
             "iv": dec_str(self.iv) if self.iv is not None else None,
             "delta": dec_str(self.delta) if self.delta is not None else None,
             "gamma": dec_str(self.gamma) if self.gamma is not None else None,
@@ -125,6 +127,7 @@ def parse_option_snapshot_dict(
     bid = _dec_opt("bid", code="SD722")
     ask = _dec_opt("ask", code="SD723")
     last = _dec_opt("last", code="SD724")
+    close = _dec_opt("close", code="SD724")
     iv = _dec_opt("iv", code="SD725", quantum=IV_QUANTUM)
     delta = _dec_opt("delta", code="SD726", quantum=GREEK_QUANTUM)
     gamma = _dec_opt("gamma", code="SD727", quantum=GREEK_QUANTUM)
@@ -190,6 +193,7 @@ def parse_option_snapshot_dict(
             bid=bid,
             ask=ask,
             last=last,
+            close=close,
             iv=iv,
             delta=delta,
             gamma=gamma,
@@ -220,12 +224,14 @@ def check_option_snapshot_usable(
     issues: list[str] = []
     if not snap.data_is_fresh:
         issues.append("data_is_fresh=false")
+    if snap.quality_flags:
+        issues.append("quality_flags_present")
 
     if require_quote:
         has_last = snap.last is not None
+        has_close = snap.close is not None
         has_bid_ask = snap.bid is not None and snap.ask is not None
-        if not (has_last or has_bid_ask):
+        if not (has_last or has_close or has_bid_ask):
             issues.append("missing_quote")
 
     return (len(issues) == 0), tuple(sorted(issues))
-

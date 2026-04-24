@@ -50,7 +50,6 @@ def test_parse_option_snapshot_and_quality():
         "iv": "0.25",
         "delta": "0.52",
         "data_is_fresh": True,
-        "quality_flags": ["vendor_ok"],
     }
     snap, diags = parse_option_snapshot_dict(d)
     assert diags == []
@@ -59,6 +58,23 @@ def test_parse_option_snapshot_and_quality():
     assert ok and issues == ()
     # deterministic serialization for potential runlog usage later
     json.dumps(snap.to_dict(), sort_keys=True)
+
+
+def test_option_snapshot_quality_flags_make_snapshot_unusable():
+    snap, diags = parse_option_snapshot_dict(
+        {
+            "timestamp": "2026-01-01T09:15:00",
+            "contract_id": "OPT:NSE:TCS:2026-01-29:100:CALL:150",
+            "last": "12.5",
+            "data_is_fresh": True,
+            "quality_flags": ["bad_tick"],
+        }
+    )
+    assert diags == []
+    assert snap is not None
+    ok, issues = check_option_snapshot_usable(snap)
+    assert not ok
+    assert "quality_flags_present" in issues
 
 
 def test_option_snapshot_missing_quote_is_unusable():
@@ -82,4 +98,3 @@ def test_option_context_rule_validates_via_cli():
     res = runner.invoke(app, ["validate", "tests/fixtures/options/option_ok.sr", "--profile", "signal"])
     assert res.exit_code == 0
     assert res.output == "OK\n"
-

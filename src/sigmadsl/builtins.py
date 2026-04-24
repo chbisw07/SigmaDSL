@@ -70,10 +70,16 @@ def option_env_types() -> dict[str, Type]:
 
     return {
         # option contract identity fields
+        "option.contract_id": STRING,
         "option.strike": PRICE,
         "option.expiry": DATE,
         "option.type": STRING,  # canonical right is CALL/PUT; represented as String in DSL for now
+        "option.lot": QUANTITY,
         # option snapshot fields (atomic)
+        "option.bid": PRICE,
+        "option.ask": PRICE,
+        "option.last": PRICE,
+        "option.close": PRICE,
         "option.iv": PERCENT,
         "option.delta": DECIMAL,
         "option.gamma": DECIMAL,

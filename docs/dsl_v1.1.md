@@ -1,7 +1,7 @@
 # Sigma Rule DSL — Specification Snapshot (`dsl_v1.1.md`)
 
 Document ID: `dsl_v1.1`  
-Status: Implemented snapshot (v1.0 stable equity product + v1.1-A option contract model/types)  
+Status: Implemented snapshot (v1.0 stable equity product + v1.1-A/B option contract context)  
 Last updated: 2026-04-24  
 Related source documents (mandatory):
 - `docs/dsl.md` — thesis backbone + architecture boundaries (source of truth)
@@ -12,11 +12,11 @@ Related source documents (mandatory):
 ## Snapshot note (v1.1)
 
 This document is a **full copy-forward** of `docs/dsl_v1.0.md` with **only the referenced v1.1 chapters updated**
-to reflect implemented v1.1-A option contract modeling foundations.
+to reflect implemented v1.1-A/B option contract context foundations (contract ids + atomic snapshots + runnable `in option:` rules).
 
 Updated sections in this snapshot:
 - Chapter 3.1 (options domain boundary clarified for v1.1-A)
-- Chapter 12.2.2 (option context field types concretized for v1.1-A)
+- Chapter 12.2.2 (option context field types and runner semantics concretized for v1.1-A/B)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -862,12 +862,21 @@ Intended `underlying` context fields:
 - `session.is_regular: Bool` (or similar)
 - `data.is_fresh: Bool` (data quality predicate)
 
-Intended `option` context fields (v1.1+; partially implemented in v1.1-A as typed field schema):
+Intended `option` context fields (v1.1+; implemented as typed schema in v1.1-A and runnable in v1.1-B):
+- `option.contract_id: String` (canonical broker-agnostic id)
 - `option.strike: Price`
-- `option.expiry: Date` (v1.1-A chooses strict ISO date `YYYY-MM-DD` for contract expiry)
-- `option.type: Enum(Call, Put)` (canonical right values: `CALL`/`PUT`)
-- `option.iv: Percent` (if present)
-- `option.delta/gamma/theta/vega: Decimal` (v1.1-A chooses Decimal for snapshot greeks; Percent remains deferred)
+- `option.expiry: Date` (strict ISO date `YYYY-MM-DD` for contract expiry)
+- `option.type: String` (canonical right values: `CALL`/`PUT`)
+- `option.lot: Quantity` (lot size)
+- quote fields (optional): `option.bid/ask/last/close: Price`
+- IV/greeks (optional):
+  - `option.iv: Percent` (ratio, e.g. `0.25` == 25%)
+  - `option.delta/gamma/theta/vega: Decimal`
+
+Runner note (v1.1-B, implemented):
+- `sigmadsl run --context option --input options.csv --rules rules.sr`
+- if multiple `contract_id` values exist in the input, the runner requires an explicit `--contract-id` (fail closed)
+- snapshot usability is enforced conservatively (see `docs/options_contract_context.md`)
 
 Canonical option contract identifier (v1.1-A, implemented):
 

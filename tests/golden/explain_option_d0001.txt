@@ -1,0 +1,76 @@
+Explain (decision)
+- id: D0001
+- kind: signal
+- profile: signal
+- verb: emit_signal
+- rule: OPT: High IV
+- event: OPT:NSE:TCS:2026-01-29:100:CALL:150 #1 @ 2026-01-03T09:20:00
+- enforcement: allowed
+- trace_ref: {"action_index": 0, "event_index": 1, "rule_name": "OPT: High IV"}
+
+Why it fired
+- selected_branch: when
+- when: data . is_fresh and option . iv > 20% => True
+- actions:
+  - emit_signal(kind="HIGH_IV", reason="iv_gt_20pct") -> D0001
+
+Decision
+{
+  "context": "option",
+  "enforcement": {
+    "blocked_by": [],
+    "status": "allowed"
+  },
+  "event_index": 1,
+  "id": "D0001",
+  "kind": "signal",
+  "profile": "signal",
+  "reason": "iv_gt_20pct",
+  "rule_name": "OPT: High IV",
+  "schema": "sigmadsl.decision",
+  "schema_version": "1.0-b",
+  "signal_kind": "HIGH_IV",
+  "strength": null,
+  "symbol": "OPT:NSE:TCS:2026-01-29:100:CALL:150",
+  "timestamp": "2026-01-03T09:20:00",
+  "trace_ref": {
+    "action_index": 0,
+    "event_index": 1,
+    "rule_name": "OPT: High IV"
+  },
+  "verb": "emit_signal"
+}
+Trace
+{
+  "event": {
+    "index": 1,
+    "symbol": "OPT:NSE:TCS:2026-01-29:100:CALL:150",
+    "timestamp": "2026-01-03T09:20:00"
+  },
+  "rule": {
+    "actions": [
+      {
+        "args": {
+          "kind": "HIGH_IV",
+          "reason": "iv_gt_20pct"
+        },
+        "decision_id": "D0001",
+        "verb": "emit_signal"
+      }
+    ],
+    "context": "option",
+    "decisions_emitted": [
+      "D0001"
+    ],
+    "evaluated_branches": [
+      {
+        "branch_kind": "when",
+        "expr": "data . is_fresh and option . iv > 20%",
+        "result": true
+      }
+    ],
+    "fired": true,
+    "rule_name": "OPT: High IV",
+    "selected_branch": "when"
+  }
+}

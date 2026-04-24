@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v1.1
 
-Status: Implemented (v1.1-A option contract model + types).  
-Scope: **Sprint v1.1-A** (“Option instrument model + types”).
+Status: Implemented (v1.1-A + v1.1-B option contract context).  
+Scope: **Sprint v1.1-A** (“Option instrument model + types”) and **Sprint v1.1-B** (“Option context binding”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -11,7 +11,9 @@ File role: High-level version summary (not a full spec copy-forward).
 - `docs/DSL_v0.md`: foundational design/spec (thesis backbone)
 - `docs/dsl_v1.1.md`: spec snapshot for v1.1 (copy-forward with option contract chapters concretized)
 
-## What v1.1 adds (v1.1-A)
+## What v1.1 adds
+
+## v1.1-A — Option contract model + types
 
 ### 1) Option contract identity model
 
@@ -47,11 +49,20 @@ This lays the groundwork for deterministic option-context execution in v1.1-B.
 
 `sigmadsl validate` now supports `in option:` rules for type checking using an explicit option field environment.
 
-Runner support for option snapshot inputs is intentionally deferred.
+## v1.1-B — Runtime option context binding + option CSV runner
+
+v1.1-B makes `in option:` rules runnable by adding:
+
+- runtime option context binding (atomic contract-level snapshots)
+- strict option snapshot CSV input support in `sigmadsl run --context option`
+- deterministic contract selection:
+  - single-contract CSVs run directly
+  - multi-contract CSVs require `--contract-id` (fail closed without it)
+- fail-closed snapshot usability checks (`data_is_fresh`, quote presence, `quality_flags`)
+
+See `docs/option_context_rules.md` and `examples/option_context_rules/` for runnable examples.
 
 ## Known limitations / deferred items
 
-- no option CSV runner yet (v1.1-B)
-- no option context binding / selection helpers yet (v1.1-B / v1.1-C)
-- no chain context (v1.2+)
-
+- no option chain context (v1.2+)
+- no automatic contract selection helpers (ATM/weekly selection, etc.)

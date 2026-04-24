@@ -1,0 +1,1 @@
+tests/fixtures/options/options_multi_contract.csv SD527 error: Option CSV contains multiple contract_id values; provide --contract-id to select one deterministically

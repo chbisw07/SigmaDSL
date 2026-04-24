@@ -15,6 +15,7 @@ from .reporting import aggregate_report_from_decision_dicts, load_decision_dicts
 from .runner import (
     decision_jsonl_lines,
     replay_from_log,
+    run_option_from_csv_with_log,
     run_underlying_from_csv_with_log,
 )
 from .validate import validate_paths
@@ -102,8 +103,14 @@ def lint(
 
 @app.command()
 def run(
-    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
+    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to input CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
+    context: str = typer.Option("underlying", "--context", help="Input context: underlying or option"),
+    contract_id: str | None = typer.Option(
+        None,
+        "--contract-id",
+        help="Canonical option contract id (required if option CSV has multiple contracts)",
+    ),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
     risk_rules: Path | None = typer.Option(
         None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
@@ -112,7 +119,10 @@ def run(
     log_out: Path | None = typer.Option(None, "--log-out", help="Write a replayable run log (Sprint 0.4-A)"),
 ):
     """
-    Run SigmaDSL rules deterministically on a bars CSV (Sprint 0.3-B; logs added in 0.4-A).
+    Run SigmaDSL rules deterministically on a CSV input (bars or option snapshots).
+
+    - `--context underlying`: bars CSV (Sprint 0.3-B; logs added in 0.4-A)
+    - `--context option`: option snapshot CSV (Sprint v1.1-B)
     """
 
     p = parse_profile(profile)
@@ -120,9 +130,27 @@ def run(
         typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
         raise typer.Exit(code=2)
 
-    result, diags = run_underlying_from_csv_with_log(
-        rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=log_out
-    )
+    ctx = context.strip().lower()
+    if ctx not in ("underlying", "option"):
+        typer.echo("Invalid --context (expected 'underlying' or 'option')", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "underlying" and contract_id is not None:
+        typer.echo("--contract-id is only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+
+    if ctx == "underlying":
+        result, diags = run_underlying_from_csv_with_log(
+            rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=log_out
+        )
+    else:
+        result, diags = run_option_from_csv_with_log(
+            rules_path=rules,
+            input_csv=input,
+            profile=p,
+            risk_rules_path=risk_rules,
+            contract_id=contract_id,
+            log_out=log_out,
+        )
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
@@ -150,8 +178,14 @@ def explain(
     decision_id: str | None = typer.Option(None, "--decision-id", help="Decision id to explain (e.g., D0003)"),
     rule: str | None = typer.Option(None, "--rule", help="Rule name to explain"),
     event_index: int | None = typer.Option(None, "--event-index", help="Event index (0-based) for --rule mode"),
-    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to bars CSV"),
+    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Path to input CSV"),
     rules: Path = typer.Option(..., "--rules", exists=True, readable=True, help="Rule file or directory"),
+    context: str = typer.Option("underlying", "--context", help="Input context: underlying or option"),
+    contract_id: str | None = typer.Option(
+        None,
+        "--contract-id",
+        help="Canonical option contract id (required if option CSV has multiple contracts)",
+    ),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
     risk_rules: Path | None = typer.Option(
         None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
@@ -170,9 +204,27 @@ def explain(
         typer.echo("Invalid --profile (expected 'signal', 'intent', or 'risk')", err=True)
         raise typer.Exit(code=2)
 
-    result, diags = run_underlying_from_csv_with_log(
-        rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=None
-    )
+    ctx = context.strip().lower()
+    if ctx not in ("underlying", "option"):
+        typer.echo("Invalid --context (expected 'underlying' or 'option')", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "underlying" and contract_id is not None:
+        typer.echo("--contract-id is only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+
+    if ctx == "underlying":
+        result, diags = run_underlying_from_csv_with_log(
+            rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=None
+        )
+    else:
+        result, diags = run_option_from_csv_with_log(
+            rules_path=rules,
+            input_csv=input,
+            profile=p,
+            risk_rules_path=risk_rules,
+            contract_id=contract_id,
+            log_out=None,
+        )
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))
