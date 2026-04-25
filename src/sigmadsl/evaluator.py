@@ -126,6 +126,7 @@ def evaluate_underlying(
             )
         rule_traces: list[RuleTrace] = []
         history = events[: pos + 1]
+        event_intent_indices: list[int] = []
 
         # Phase 1: primary profile evaluation (signal or intent)
         for compiled in ordered_rules:
@@ -259,6 +260,7 @@ def evaluate_underlying(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     elif verb == "cancel_intent":
                         reason = args.get("reason")
                         if reason is not None and not isinstance(reason, str):
@@ -283,6 +285,7 @@ def evaluate_underlying(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     elif verb == "constrain_max_position":
                         qty = args.get("quantity")
                         reason = args.get("reason")
@@ -348,6 +351,17 @@ def evaluate_underlying(
                     actions=tuple(action_traces),
                 )
             )
+
+        # Phase 1.5: intent resolution (v2.0-A)
+        effective_intent_ids: set[str] = set()
+        if event_intent_indices:
+            from .intent_resolution import resolve_intents_for_event
+
+            raw_intents: list[IntentDecision] = [decisions[i] for i in event_intent_indices]  # type: ignore[list-item]
+            effective = resolve_intents_for_event(raw_intents)
+            effective_intent_ids = {d.id for d in effective}
+            for slot, idx in enumerate(event_intent_indices):
+                decisions[idx] = raw_intents[slot]
 
         # Phase 2: risk evaluation + enforcement (v1.0-B)
         if ordered_risk_rules:
@@ -491,7 +505,18 @@ def evaluate_underlying(
                 )
 
             # Apply constraints to primary decisions emitted at this event.
-            blocks = applied_blocks_for_event(primary_decisions=decisions, constraints=risk_constraints, event_index=ev.index)
+            # v2.0-A: only effective intents participate in risk gating; overridden intents are ignored.
+            primary_for_risk: list[Decision]
+            if effective_intent_ids:
+                primary_for_risk = [
+                    d for d in decisions if not (isinstance(d, IntentDecision) and d.id not in effective_intent_ids)
+                ]
+            else:
+                primary_for_risk = decisions
+
+            blocks = applied_blocks_for_event(
+                primary_decisions=primary_for_risk, constraints=risk_constraints, event_index=ev.index
+            )
             for target_id, blocked_by in blocks.items():
                 idx = decision_index_by_id.get(target_id)
                 if idx is None:
@@ -548,6 +573,7 @@ def evaluate_option(
             )
         rule_traces: list[RuleTrace] = []
         history: list[RuntimeEvent] = list(events[: pos + 1])
+        event_intent_indices: list[int] = []
 
         # Phase 1: primary profile evaluation (signal or intent)
         for compiled in ordered_rules:
@@ -678,6 +704,7 @@ def evaluate_option(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     elif verb == "cancel_intent":
                         reason = args.get("reason")
                         if reason is not None and not isinstance(reason, str):
@@ -702,6 +729,7 @@ def evaluate_option(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     else:
                         raise EvalError(f"Unsupported verb at runtime: {verb!r}")
 
@@ -718,6 +746,17 @@ def evaluate_option(
                     actions=tuple(action_traces),
                 )
             )
+
+        # Phase 1.5: intent resolution (v2.0-A)
+        effective_intent_ids: set[str] = set()
+        if event_intent_indices:
+            from .intent_resolution import resolve_intents_for_event
+
+            raw_intents: list[IntentDecision] = [decisions[i] for i in event_intent_indices]  # type: ignore[list-item]
+            effective = resolve_intents_for_event(raw_intents)
+            effective_intent_ids = {d.id for d in effective}
+            for slot, idx in enumerate(event_intent_indices):
+                decisions[idx] = raw_intents[slot]
 
         # Phase 2: risk evaluation + enforcement (v1.0-B; supported for option context too)
         if ordered_risk_rules:
@@ -860,7 +899,17 @@ def evaluate_option(
                     )
                 )
 
-            blocks = applied_blocks_for_event(primary_decisions=decisions, constraints=risk_constraints, event_index=ev.index)
+            primary_for_risk: list[Decision]
+            if effective_intent_ids:
+                primary_for_risk = [
+                    d for d in decisions if not (isinstance(d, IntentDecision) and d.id not in effective_intent_ids)
+                ]
+            else:
+                primary_for_risk = decisions
+
+            blocks = applied_blocks_for_event(
+                primary_decisions=primary_for_risk, constraints=risk_constraints, event_index=ev.index
+            )
             for target_id, blocked_by in blocks.items():
                 idx = decision_index_by_id.get(target_id)
                 if idx is None:
@@ -954,6 +1003,7 @@ def evaluate_chain(
         rule_traces: list[RuleTrace] = []
         history: list[RuntimeEvent] = list(events[: pos + 1])
         has_unknowns = bool(ev.snapshot.has_unknowns)
+        event_intent_indices: list[int] = []
 
         for compiled in ordered_rules:
             rule = compiled.rule
@@ -1089,6 +1139,7 @@ def evaluate_chain(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     elif verb == "cancel_intent":
                         reason = args.get("reason")
                         if reason is not None and not isinstance(reason, str):
@@ -1113,6 +1164,7 @@ def evaluate_chain(
                                 reason=reason,
                             )
                         )
+                        event_intent_indices.append(len(decisions) - 1)
                     else:
                         raise EvalError(f"Unsupported verb at runtime: {verb!r}")
 
@@ -1127,6 +1179,15 @@ def evaluate_chain(
                     actions=tuple(action_traces),
                 )
             )
+
+        # Phase 1.5: intent resolution (v2.0-A)
+        if event_intent_indices:
+            from .intent_resolution import resolve_intents_for_event
+
+            raw_intents: list[IntentDecision] = [decisions[i] for i in event_intent_indices]  # type: ignore[list-item]
+            resolve_intents_for_event(raw_intents)
+            for slot, idx in enumerate(event_intent_indices):
+                decisions[idx] = raw_intents[slot]
 
         event_traces.append(EventTrace(symbol=ev.symbol, index=ev.index, timestamp=ev.timestamp, rules=tuple(rule_traces)))
 

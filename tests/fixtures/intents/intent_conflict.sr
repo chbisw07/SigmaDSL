@@ -1,0 +1,16 @@
+rule "INTENT: declare 100 a" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=100, reason="a")
+
+rule "INTENT: declare 100 b (dup by key)" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=100, reason="b")
+
+rule "INTENT: declare 200 (conflict by qty)" in underlying:
+    when true:
+        then declare_intent(kind="TARGET_LONG", quantity=200, reason="c")
+
+rule "INTENT: cancel overrides declares" in underlying:
+    when true:
+        then cancel_intent(reason="cancel_all")
+

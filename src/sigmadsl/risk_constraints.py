@@ -46,6 +46,9 @@ def applied_blocks_for_event(
         # Do not block constraints themselves; we only apply to prior non-risk decisions.
         if d.kind in ("constraint", "annotation"):
             continue
+        # v2.0-A: overridden intents are ignored by risk enforcement.
+        if isinstance(d, IntentDecision) and not getattr(d, "is_effective", True):
+            continue
         blockers: set[str] = set()
 
         if block_all_ids:

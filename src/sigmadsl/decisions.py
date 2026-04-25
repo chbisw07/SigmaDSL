@@ -83,6 +83,9 @@ class IntentDecision(Decision):
     quantity: Decimal | None = None
     percent: Decimal | None = None
     reason: str | None = None
+    # v2.0-A: intent resolution (idempotency + conflict resolution)
+    is_effective: bool = True
+    overridden_by: str | None = None
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -93,6 +96,8 @@ class IntentDecision(Decision):
                 "quantity": dec_str(self.quantity) if self.quantity is not None else None,
                 "percent": dec_str(self.percent) if self.percent is not None else None,
                 "reason": self.reason,
+                "is_effective": self.is_effective,
+                "overridden_by": self.overridden_by,
             }
         )
         return d
