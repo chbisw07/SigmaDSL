@@ -1801,15 +1801,18 @@ rule "OPT: Rising IV With Stable Underlying" in option:
 
 ## 27.7 Worked Example — Option chain-based classification rule (v1.2+)
 
-**Status: DEFERRED**  
-Rationale: Chain context delivered in v1.2 per roadmap.  
-Implications: Must wait for chain snapshot atomicity and derived metrics definitions.
+**Status: IMPLEMENTED (v1.2-B + v1.2-C)**  
+Rationale: Chain snapshot atomicity (v1.2-A) and derived metrics v1 (v1.2-B) are implemented, and runnable worked examples are provided (v1.2-C).
 
 ```sr
 rule "CHAIN: Put-Call OI Imbalance" in chain:
     when chain.is_fresh and chain.pcr_oi > 1.3 and chain.oi_change_puts > chain.oi_change_calls:
         then emit_signal(kind="BEARISH_SENTIMENT", reason="pcr_oi_high_put_oi_rising")
 ```
+
+Runnable implementation references:
+- example rule: `examples/option_chain_context/worked_examples/02_pcr_sentiment.sr`
+- cookbook: `docs/chain_context_cookbook.md`
 
 ## 27.8 Worked Example — Management rule using action verbs (v2.0+)
 

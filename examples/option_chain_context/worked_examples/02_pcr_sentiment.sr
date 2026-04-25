@@ -1,0 +1,5 @@
+# Matches the v1.2 worked example style in `docs/dsl_v1.2.md` (Chapter 27 worked examples).
+rule "CHAIN: Put-Call OI Imbalance" in chain:
+    when chain.is_fresh and chain.pcr_oi > 1.3 and chain.oi_change_puts > chain.oi_change_calls:
+        then emit_signal(kind="BEARISH_SENTIMENT", reason="pcr_oi_high_put_oi_rising")
+

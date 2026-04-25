@@ -1,0 +1,4 @@
+rule "CHAIN: IV Skew Alert" in chain:
+    when chain.quality_ok and abs(chain.iv_skew) > 3%:
+        then emit_signal(kind="SKEW_ALERT", reason="iv_skew_abs_gt_3pct")
+

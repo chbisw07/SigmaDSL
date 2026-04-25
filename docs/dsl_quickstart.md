@@ -354,3 +354,7 @@ Runnable example:
 ```bash
 sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/chain_metrics.sr
 ```
+
+Cookbook + worked examples:
+- `docs/chain_context_cookbook.md`
+- `examples/option_chain_context/worked_examples/`

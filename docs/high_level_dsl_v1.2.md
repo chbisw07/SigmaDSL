@@ -88,3 +88,6 @@ Unknown behavior (conservative):
 
 Runnable examples:
 - `examples/option_chain_context/chain_metrics.sr`
+Worked examples + cookbook:
+- `examples/option_chain_context/worked_examples/`
+- `docs/chain_context_cookbook.md`

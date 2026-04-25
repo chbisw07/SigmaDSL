@@ -19,6 +19,10 @@ Out of scope (later sprints):
 - `in chain:` access to per-contract arrays or general aggregations
 - strategy generation / broker execution
 
+See also:
+- `docs/chain_context_cookbook.md` (worked patterns + runnable examples)
+- `examples/option_chain_context/` (small deterministic datasets + expected outputs)
+
 ## What a chain snapshot is
 
 A chain snapshot is a point-in-time set of option contract rows for a single:

@@ -1,0 +1,4 @@
+rule "CHAIN: Quality Gate" in chain:
+    when chain.quality_ok:
+        then emit_signal(kind="CHAIN_OK", reason="quality_ok")
+

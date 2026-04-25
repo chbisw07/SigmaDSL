@@ -1,0 +1,4 @@
+rule "CHAIN: PCR Volume High" in chain:
+    when chain.quality_ok and chain.pcr_volume > 1.2:
+        then emit_signal(kind="PCR_VOL_HIGH", reason="pcr_volume_gt_1_2")
+

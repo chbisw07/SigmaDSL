@@ -1,0 +1,4 @@
+snapshot_timestamp,contract_id,last,data_is_fresh,quality_flags
+2026-01-01T09:15:00,OPT:NSE:INFY:2026-01-29:1500:CALL:300,120.50,true,
+2026-01-01T09:15:00,OPT:NSE:INFY:2026-01-29:1500:PUT:300,,true,
+

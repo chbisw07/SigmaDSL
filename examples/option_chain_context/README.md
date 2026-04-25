@@ -38,3 +38,21 @@ Expected output:
 
 - event 0: complete/fresh snapshot → `chain.quality_ok` emits `chain_ok`
 - event 1: incomplete snapshot → `chain.has_unknowns` emits `chain_unknown`
+
+## Worked examples (v1.2-C)
+
+Runnable worked examples live under `examples/option_chain_context/worked_examples/`.
+
+Each file is designed to be run with one of the small datasets under `examples/option_chain_context/data/`,
+and the expected outputs live under `examples/option_chain_context/expected/worked_examples/`.
+
+Example commands:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_demo.csv --rules examples/option_chain_context/worked_examples/01_chain_quality_gate.sr
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/02_pcr_sentiment.sr
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/03_iv_skew_alert.sr
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/04_pcr_volume_high.sr
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/05_bearish_confirmed.sr
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_incomplete_only.csv --rules examples/option_chain_context/worked_examples/06_unknown_incomplete_chain.sr
+```

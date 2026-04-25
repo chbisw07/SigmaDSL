@@ -22,6 +22,7 @@ This repository currently implements:
 - `docs/high_level_dsl_v1.0.md` (v1.0 snapshot: profiles + stable schema + risk gating)
 - `docs/high_level_dsl_v1.1.md` (v1.1 snapshot: option contract model + snapshot inputs)
 - `docs/high_level_dsl_v1.2.md` (v1.2 snapshot: atomic chain snapshots + derived metrics v1)
+- `docs/chain_context_cookbook.md` (worked patterns + runnable chain examples)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
 spec-level copy-forward updates beyond `docs/DSL_v0.md`.

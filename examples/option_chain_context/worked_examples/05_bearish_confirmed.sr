@@ -1,0 +1,3 @@
+rule "CHAIN: Bearish Confirmed" in chain:
+    when chain.quality_ok and chain.pcr_oi > 1.3 and chain.oi_change_puts > 0 and chain.iv_skew > 0%:
+        then emit_signal(kind="BEARISH_CONFIRMED", reason="pcr_oi_put_oi_up_skew_pos")

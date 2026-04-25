@@ -364,3 +364,63 @@ sigmadsl replay --log /tmp/chain_metrics_runlog.json
 - no strike-matched skew surfaces (ATM/OTM skew, term structure, smile, etc.)
 - no chain iteration/aggregation DSL surface beyond these named metrics
 - no max pain / GEX / probability models
+
+---
+
+## Sprint v1.2-C — Chain-driven worked examples
+
+### Sprint goal
+
+Ship teachable, runnable, deterministic chain examples aligned with the worked-example chapter in `docs/dsl_v1.2.md`.
+
+This sprint is documentation + examples + tests only (no new engine capability).
+
+### What was implemented
+
+- **Worked examples pack**
+  - added: `examples/option_chain_context/worked_examples/`
+  - each example has:
+    - a small `.sr` rule file
+    - a small deterministic CSV input under `examples/option_chain_context/data/`
+    - an expected JSONL output under `examples/option_chain_context/expected/worked_examples/`
+  - covered patterns:
+    - quality gate
+    - PCR-based sentiment
+    - OI-change confirmation
+    - IV-skew alert
+    - combined confirmation rule
+    - Unknown/incomplete-chain handling
+- **Chain context cookbook**
+  - added: `docs/chain_context_cookbook.md`
+  - focuses on authoring patterns, metric definitions, rounding, and Unknown behavior
+- **End-to-end tests**
+  - added: `tests/test_examples_option_chain_worked_examples.py`
+  - checks:
+    - `sigmadsl validate` and `sigmadsl lint` on the worked-examples directory
+    - deterministic run outputs match expected JSONL
+    - replay equivalence for an Unknown/incomplete example
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Run a representative worked example:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/02_pcr_sentiment.sr
+```
+
+See Unknown at event 0 (no prior snapshot for OI-change):
+
+```bash
+sigmadsl explain --context chain --rule "CHAIN: Put-Call OI Imbalance" --event-index 0 --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/worked_examples/02_pcr_sentiment.sr
+```
+
+### Known limitations (intentionally deferred)
+
+- cookbook/examples intentionally avoid any strategy-generation language or broker execution semantics
+- no new chain analytics beyond the v1 metric set in v1.2-B

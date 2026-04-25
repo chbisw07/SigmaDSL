@@ -1,0 +1,8 @@
+rule "CHAIN: Unconditional (Blocked by Unknown)" in chain:
+    when true:
+        then emit_signal(kind="SHOULD_NOT_FIRE", reason="unconditional")
+
+rule "CHAIN: Unknown Guard" in chain:
+    when chain.has_unknowns:
+        then emit_signal(kind="CHAIN_UNKNOWN", reason="has_unknowns")
+
