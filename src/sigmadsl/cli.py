@@ -129,7 +129,7 @@ def run(
 
     - `--context underlying`: bars CSV (Sprint 0.3-B; logs added in 0.4-A)
     - `--context option`: option snapshot CSV (Sprint v1.1-B)
-    - `--context chain`: option chain snapshot CSV (Sprint v1.2-A)
+    - `--context chain`: option chain snapshot CSV (Sprint v1.2-B)
     """
 
     p = parse_profile(profile)

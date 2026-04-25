@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v1.2
 
-Status: Implemented (Sprint v1.2-A chain snapshot semantics).  
-Scope: **Sprint v1.2-A** (“Chain schema + snapshot semantics”).
+Status: Implemented (Sprint v1.2-A/B chain snapshot + derived metrics).  
+Scope: **Sprint v1.2-A** (“Chain schema + snapshot semantics”) and **Sprint v1.2-B** (“Derived chain metrics v1”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -11,7 +11,9 @@ File role: High-level version summary (not a full spec copy-forward).
 - `docs/dsl_v1.2.md`: spec snapshot for v1.2 (copy-forward with chain snapshot sections concretized)
 - `docs/DSL_v0.md`: foundational design/spec (thesis backbone)
 
-## What v1.2 adds (v1.2-A)
+## What v1.2 adds
+
+## v1.2-A — Chain schema + snapshot semantics
 
 ### 1) Atomic chain snapshot inputs
 
@@ -67,7 +69,22 @@ sigmadsl replay --log runlog.json
 
 ## Deferred (not in v1.2-A)
 
-- chain-derived metrics/analytics (PCR/max pain/skew/etc.)
+- chain-derived metrics/analytics beyond v1.2-B (max pain/skew surfaces beyond the narrow v1 set, OI concentration, etc.)
 - chain iteration/aggregation over contracts
 - strategy generation, broker execution, planning/routing
 
+## v1.2-B — Derived chain metrics v1
+
+v1.2-B adds a small, explicit derived-metrics surface to the `chain` context (still deterministic and fail-closed):
+
+- `chain.pcr_oi` (put/call OI ratio, 4 dp quantized)
+- `chain.pcr_volume` (put/call volume ratio, 4 dp quantized)
+- `chain.oi_change` / `chain.oi_change_puts` / `chain.oi_change_calls` (requires prior snapshot + identical contract sets)
+- `chain.iv_skew` (mean(put_iv) - mean(call_iv), 6 dp quantized)
+
+Unknown behavior (conservative):
+- metrics are Unknown unless the snapshot is complete and fresh
+- missing fields or zero denominators produce Unknown (not zero)
+
+Runnable examples:
+- `examples/option_chain_context/chain_metrics.sr`

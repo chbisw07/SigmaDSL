@@ -172,3 +172,27 @@ def test_cli_run_chain_log_out_and_replay_equivalence(tmp_path: Path):
     assert len(d["input"]["events"]) == 2
     assert d["input"]["events"][0]["snapshot"]["schema"] == "sigmadsl.chain_snapshot"
     assert d["input"]["events"][0]["snapshot"]["schema_version"] == "1.2-a"
+
+
+def test_cli_run_chain_metrics_log_out_and_replay_equivalence(tmp_path: Path):
+    log_path = tmp_path / "chain_metrics_runlog.json"
+
+    run_res = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_metrics.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_metrics.sr",
+            "--log-out",
+            str(log_path),
+        ],
+    )
+    assert run_res.exit_code == 0
+
+    replay_res = runner.invoke(app, ["replay", "--log", str(log_path)])
+    assert replay_res.exit_code == 0
+    assert replay_res.output == run_res.output

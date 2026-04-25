@@ -58,6 +58,7 @@ _CHAIN_OPTIONAL_COLUMNS = (
     "theta",
     "vega",
     "open_interest",
+    "oi",
     "volume",
     "data_is_fresh",
     "quality_flags",
@@ -579,13 +580,18 @@ def _load_chain_events_csv_impl(path: Path) -> tuple[list[ChainEvent], CsvLoadMe
                     v = row.get(k)
                     if v is None or str(v).strip() == "":
                         continue
-                    if k in ("open_interest", "volume"):
+                    if k in ("open_interest", "oi", "volume"):
                         snap_d[k] = str(v).strip()
                     elif k == "quality_flags":
                         flags = [x.strip() for x in str(v).split(",") if x.strip()]
                         snap_d[k] = flags
                     else:
                         snap_d[k] = str(v).strip()
+
+            # Aliases: allow `oi` in chain CSV (maps to OptionSnapshot.open_interest).
+            if "open_interest" not in snap_d and "oi" in snap_d:
+                snap_d["open_interest"] = snap_d["oi"]
+                del snap_d["oi"]
 
             if "data_is_fresh" in row:
                 raw = row.get("data_is_fresh")

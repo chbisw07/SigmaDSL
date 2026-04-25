@@ -1,0 +1,11 @@
+rule "CHAIN: Bearish Sentiment" in chain:
+    when chain.quality_ok and chain.pcr_oi > 1.3 and chain.oi_change_puts > chain.oi_change_calls:
+        then emit_signal(kind="BEARISH_SENTIMENT", reason="pcr_oi_high_put_oi_rising")
+
+rule "CHAIN: Skew Alert" in chain:
+    when chain.quality_ok and abs(chain.iv_skew) > 3%:
+        then emit_signal(kind="SKEW_ALERT", reason="iv_skew_abs_gt_3pct")
+
+rule "CHAIN: PCR Volume High" in chain:
+    when chain.quality_ok and chain.pcr_volume > 1.2:
+        then emit_signal(kind="PCR_VOL_HIGH", reason="pcr_volume_gt_1_2")

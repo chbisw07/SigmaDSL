@@ -109,6 +109,13 @@ def chain_env_types() -> dict[str, Type]:
         "chain.is_complete": BOOL,
         "chain.has_unknowns": BOOL,
         "chain.quality_ok": BOOL,
+        # v1.2-B: derived metrics v1 (Decimal-backed; deterministic rounding; Unknown on insufficiency).
+        "chain.pcr_oi": DECIMAL,
+        "chain.pcr_volume": DECIMAL,
+        "chain.oi_change": QUANTITY,
+        "chain.oi_change_puts": QUANTITY,
+        "chain.oi_change_calls": QUANTITY,
+        "chain.iv_skew": PERCENT,
     }
 
 

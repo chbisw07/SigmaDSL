@@ -437,3 +437,21 @@ def test_cli_run_chain_unknown_policy_jsonl_golden():
     assert result.exit_code == 0
     golden = Path("tests/golden/run_chain_unknown_policy.jsonl").read_text(encoding="utf-8")
     assert result.output == golden
+
+
+def test_cli_run_chain_metrics_jsonl_golden():
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_metrics.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_metrics.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/run_chain_metrics.jsonl").read_text(encoding="utf-8")
+    assert result.output == golden

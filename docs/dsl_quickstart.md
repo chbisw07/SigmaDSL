@@ -340,3 +340,17 @@ sigmadsl run --context chain --input examples/option_chain_context/data/chain_de
 ```
 
 See `docs/option_chain_context.md` for the CSV format and unknown policy.
+
+## Derived chain metrics (v1.2-B)
+
+Sprint v1.2-B adds a small derived-metrics surface in `in chain:` rules:
+
+- `chain.pcr_oi`, `chain.pcr_volume`
+- `chain.oi_change`, `chain.oi_change_puts`, `chain.oi_change_calls`
+- `chain.iv_skew`
+
+Runnable example:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/chain_metrics.sr
+```

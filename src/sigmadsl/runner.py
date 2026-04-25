@@ -356,11 +356,11 @@ def run_chain_from_csv_with_log(
     rules_path: Path,
     input_csv: Path,
     profile: DecisionProfile = DecisionProfile.signal,
-    engine_version: str = "v1.2-a",
+    engine_version: str = "v1.2-b",
     log_out: Path | None,
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
     """
-    Sprint v1.2-A: chain snapshot runner for `in chain:` rules.
+    Sprint v1.2-B: chain snapshot runner for `in chain:` rules (quality + derived metrics).
     """
 
     from .csv_input import load_chain_events_csv_with_meta

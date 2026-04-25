@@ -1,4 +1,4 @@
-# Option chain context (v1.2-A)
+# Option chain context (v1.2-A / v1.2-B)
 
 Sprint **v1.2-A** introduces a minimal, deterministic **option chain snapshot** input model and a runnable `chain` context.
 
@@ -9,9 +9,14 @@ Scope (v1.2-A):
 - deterministic **Unknown** policy for incomplete chain snapshots
 - replayable run logs for chain runs (`--log-out` + `sigmadsl replay`)
 
+Scope (v1.2-B):
+- derived chain metrics v1 (PCR, OI change, skew-style metric)
+- deterministic rounding for metrics (Decimal-backed)
+- metric-level Unknown behavior for missing inputs / zero denominators / missing prior snapshot
+
 Out of scope (later sprints):
-- chain-derived analytics (PCR/max pain/skew/OI concentration/etc.)
-- `in chain:` access to per-contract arrays or derived metrics
+- advanced chain analytics (max pain, skew surfaces by strike/tenor, OI concentration, etc.)
+- `in chain:` access to per-contract arrays or general aggregations
 - strategy generation / broker execution
 
 ## What a chain snapshot is
@@ -38,7 +43,7 @@ Required columns:
 Optional columns (parsed deterministically if present):
 - quotes: `bid`, `ask`, `last`, `close`
 - IV/greeks: `iv`, `delta`, `gamma`, `theta`, `vega`
-- sizes: `open_interest`, `volume`
+- sizes: `open_interest` (or `oi`), `volume`
 - explicit guards: `data_is_fresh`, `quality_flags` (comma-separated tokens)
 
 Atomic grouping rule:
@@ -58,6 +63,40 @@ Chain rules can use the following deterministic predicates:
 Timestamp identity fields:
 - `chain.as_of` and `chain.time` are aliases for the snapshot timestamp string carried by the event.
 
+## Derived chain metrics v1 (v1.2-B)
+
+In v1.2-B, the `chain` context exposes a small, explicit derived-metrics surface as **read-only fields**:
+
+- `chain.pcr_oi: Decimal`
+  - put open interest / call open interest
+- `chain.pcr_volume: Decimal`
+  - put volume / call volume
+- `chain.oi_change: Quantity`
+  - net chain open-interest change vs the immediately previous snapshot
+- `chain.oi_change_puts: Quantity`
+- `chain.oi_change_calls: Quantity`
+- `chain.iv_skew: Percent`
+  - mean(put_iv) - mean(call_iv) (skew-style; not strike-matched yet)
+
+### Metric guard policy (fail closed)
+
+All derived metrics are **Unknown** unless the snapshot is “quality OK”:
+
+- `chain.is_complete=true`
+- `chain.is_fresh=true`
+- no `quality_flags`
+
+In addition:
+- PCR metrics require the required fields on **all** contracts in the snapshot.
+- PCR denominators must be `> 0` (zero denominator → Unknown).
+- OI change metrics require a prior snapshot and require identical contract-id sets between prev/current (fail closed).
+
+### Deterministic rounding
+
+- `chain.pcr_oi` and `chain.pcr_volume` are quantized to **4 dp** (e.g., `1.5000`).
+- `chain.iv_skew` is quantized to **6 dp** (matching the IV input quantization).
+- OI change metrics are integer `Decimal` values (no fractional).
+
 ## Deterministic Unknown policy (incomplete chain snapshots)
 
 When `chain.has_unknowns` is `true`, v1.2-A applies a conservative unknown policy:
@@ -74,6 +113,10 @@ rule "Bad" in chain:
 ```
 
 from emitting decisions on incomplete chain snapshots.
+
+Metric-level Unknowns:
+- even on complete snapshots, a derived metric can still be Unknown (missing required fields / zero denom / missing prior snapshot).
+- Unknown predicate outcomes do not match and are surfaced as `Unknown` in `sigmadsl explain`.
 
 You can inspect this in trace output:
 
@@ -92,6 +135,12 @@ Run:
 sigmadsl run --context chain --input examples/option_chain_context/data/chain_demo.csv --rules examples/option_chain_context/chain_quality.sr
 ```
 
+Derived metrics demo:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/chain_metrics.sr
+```
+
 ## Replay (v0.4-A + v1.2-A)
 
 Chain runs can be logged and replayed deterministically:
@@ -100,4 +149,3 @@ Chain runs can be logged and replayed deterministically:
 sigmadsl run --context chain --input chain.csv --rules rules.sr --log-out runlog.json
 sigmadsl replay --log runlog.json
 ```
-

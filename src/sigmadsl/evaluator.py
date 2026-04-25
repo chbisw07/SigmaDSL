@@ -33,6 +33,16 @@ from .expr import (
 from .runtime_models import UnderlyingEvent, dec
 from .options_runtime import OptionEvent
 from .chain_runtime import ChainEvent
+from .chain_metrics import (
+    UNKNOWN as UNKNOWN_VALUE,
+    is_unknown,
+    iv_skew as chain_iv_skew,
+    oi_change as chain_oi_change,
+    oi_change_calls as chain_oi_change_calls,
+    oi_change_puts as chain_oi_change_puts,
+    pcr_oi as chain_pcr_oi,
+    pcr_volume as chain_pcr_volume,
+)
 from .trace import ActionTrace, BranchPredicateTrace, EventTrace, RuleTrace, RunTrace
 from .indicators import (
     IndicatorCache,
@@ -870,18 +880,20 @@ def evaluate_chain(
     events: list[ChainEvent],
     *,
     profile: DecisionProfile = DecisionProfile.signal,
-    engine_version: str = "v1.2-a",
+    engine_version: str = "v1.2-b",
 ) -> EvalResult:
     """
-    Sprint v1.2-A: deterministic evaluation for `chain` context rules on atomic chain snapshots.
+    Sprint v1.2-B: deterministic evaluation for `chain` context rules on atomic chain snapshots.
 
     Scope:
-    - chain quality predicates only (no chain analytics yet)
+    - chain snapshot quality predicates + a small v1 derived-metrics surface
     - atomic snapshot semantics: each ChainEvent is evaluated as a unit
     - deterministic unknown policy:
       - if `chain.has_unknowns` is True and a predicate does not reference any chain quality fields,
         the predicate result is recorded as Unknown and does not match.
       - else branches are disabled when `chain.has_unknowns` is True (fail closed).
+      - additionally, derived metrics can be Unknown (missing fields / zero denom / no prior snapshot);
+        Unknown predicate outcomes do not match.
     """
 
     ordered_rules = sorted(rules, key=lambda r: r.order_key())
@@ -968,11 +980,11 @@ def evaluate_chain(
                     )
                     continue
 
-                result = _eval_predicate(br.condition.node, ev, history, indicator_cache, indicators)
+                result = _eval_predicate_maybe(br.condition.node, ev, history, indicator_cache, indicators)
                 evaluated_branches.append(
                     BranchPredicateTrace(branch_kind=br.kind, expr=br.condition.text, result=result)
                 )
-                if result and selected_branch is None:
+                if result is True and selected_branch is None:
                     selected_branch = br
                     selected_kind = br.kind
                     break
@@ -1145,6 +1157,11 @@ def _runtime_env(ev: RuntimeEvent, history: list[RuntimeEvent]) -> dict[str, obj
 
     if isinstance(ev, ChainEvent):
         snap = ev.snapshot
+        prev_snap = None
+        if len(history) >= 2:
+            prev_ev = history[-2]
+            if isinstance(prev_ev, ChainEvent) and prev_ev.symbol == ev.symbol:
+                prev_snap = prev_ev.snapshot
         env: dict[str, object] = {
             "chain.as_of": ev.timestamp,
             "chain.time": ev.timestamp,  # alias
@@ -1152,6 +1169,13 @@ def _runtime_env(ev: RuntimeEvent, history: list[RuntimeEvent]) -> dict[str, obj
             "chain.is_complete": bool(snap.is_complete),
             "chain.has_unknowns": bool(snap.has_unknowns),
             "chain.quality_ok": bool(snap.is_complete) and bool(snap.data_is_fresh) and not bool(snap.quality_flags),
+            # v1.2-B derived metrics
+            "chain.pcr_oi": chain_pcr_oi(snap),
+            "chain.pcr_volume": chain_pcr_volume(snap),
+            "chain.iv_skew": chain_iv_skew(snap),
+            "chain.oi_change": chain_oi_change(prev_snap, snap),
+            "chain.oi_change_puts": chain_oi_change_puts(prev_snap, snap),
+            "chain.oi_change_calls": chain_oi_change_calls(prev_snap, snap),
         }
         return env
 
@@ -1203,6 +1227,27 @@ def _eval_predicate(
     return val
 
 
+def _eval_predicate_maybe(
+    node: ExprNode | None,
+    ev: RuntimeEvent,
+    history: list[RuntimeEvent],
+    cache: IndicatorCache,
+    indicators: dict[str, IndicatorDef],
+) -> bool | None:
+    """
+    v1.2-B: evaluate a predicate allowing a deterministic Unknown result.
+
+    Unknown is represented by the chain-metrics UNKNOWN sentinel flowing through `_eval_value`.
+    """
+
+    val = _eval_value(node, ev, history, cache, indicators)
+    if is_unknown(val):
+        return None
+    if not isinstance(val, bool):
+        raise EvalError("Predicate did not evaluate to Bool")
+    return val
+
+
 def _eval_value(
     node: ExprNode | None,
     ev: RuntimeEvent,
@@ -1243,38 +1288,54 @@ def _eval_value(
     if isinstance(node, UnaryOp):
         v = _eval_value(node.operand, ev, history, cache, indicators)
         if node.op == "not":
+            if is_unknown(v):
+                return UNKNOWN_VALUE
             if not isinstance(v, bool):
                 raise EvalError("'not' requires Bool")
             return not v
         if node.op == "+":
+            if is_unknown(v):
+                return UNKNOWN_VALUE
             return _as_decimal(v)
         if node.op == "-":
+            if is_unknown(v):
+                return UNKNOWN_VALUE
             return -_as_decimal(v)
         raise EvalError(f"Unsupported unary op: {node.op!r}")
 
     if isinstance(node, BinaryOp):
         if node.op in ("and", "or"):
             left = _eval_value(node.left, ev, history, cache, indicators)
-            if not isinstance(left, bool):
+            if not (isinstance(left, bool) or is_unknown(left)):
                 raise EvalError(f"{node.op!r} left operand must be Bool")
             if node.op == "and":
-                if not left:
+                if left is False:
                     return False
                 right = _eval_value(node.right, ev, history, cache, indicators)
-                if not isinstance(right, bool):
+                if not (isinstance(right, bool) or is_unknown(right)):
                     raise EvalError(f"{node.op!r} right operand must be Bool")
-                return bool(right)
+                if right is False:
+                    return False
+                if left is True and right is True:
+                    return True
+                return UNKNOWN_VALUE
             else:
-                if left:
+                if left is True:
                     return True
                 right = _eval_value(node.right, ev, history, cache, indicators)
-                if not isinstance(right, bool):
+                if not (isinstance(right, bool) or is_unknown(right)):
                     raise EvalError(f"{node.op!r} right operand must be Bool")
-                return bool(right)
+                if right is True:
+                    return True
+                if left is False and right is False:
+                    return False
+                return UNKNOWN_VALUE
 
         # arithmetic
         l = _eval_value(node.left, ev, history, cache, indicators)
         r = _eval_value(node.right, ev, history, cache, indicators)
+        if is_unknown(l) or is_unknown(r):
+            return UNKNOWN_VALUE
         ld = _as_decimal(l)
         rd = _as_decimal(r)
         if node.op == "+":
@@ -1290,6 +1351,8 @@ def _eval_value(
     if isinstance(node, CompareOp):
         l = _eval_value(node.left, ev, history, cache, indicators)
         r = _eval_value(node.right, ev, history, cache, indicators)
+        if is_unknown(l) or is_unknown(r):
+            return UNKNOWN_VALUE
         if isinstance(l, bool) or isinstance(r, bool):
             raise EvalError("Comparison operands must be non-bool")
         ld = _as_decimal(l) if isinstance(l, Decimal) or isinstance(l, (int, str)) else l
@@ -1324,7 +1387,10 @@ def _eval_call(
     if fn == "abs":
         if len(node.args) != 1:
             raise EvalError("abs() expects 1 argument")
-        return abs(_as_decimal(_eval_value(node.args[0], ev, history, cache, indicators)))
+        v = _eval_value(node.args[0], ev, history, cache, indicators)
+        if is_unknown(v):
+            return UNKNOWN_VALUE
+        return abs(_as_decimal(v))
 
     # Bar-series functions and indicators are currently defined for `underlying` context only.
     if not isinstance(ev, UnderlyingEvent):

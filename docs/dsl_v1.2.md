@@ -1,7 +1,7 @@
 # Sigma Rule DSL — Specification Snapshot (`dsl_v1.2.md`)
 
 Document ID: `dsl_v1.2`  
-Status: Implemented snapshot (v1.0 stable equity product + v1.1 option context + v1.2-A chain snapshot semantics)  
+Status: Implemented snapshot (v1.0 stable equity product + v1.1 option context + v1.2-A/B chain snapshot + metrics v1)  
 Last updated: 2026-04-25  
 Related source documents (mandatory):
 - `docs/dsl.md` — thesis backbone + architecture boundaries (source of truth)
@@ -12,11 +12,13 @@ Related source documents (mandatory):
 ## Snapshot note (v1.2)
 
 This document is a **full copy-forward** of `docs/dsl_v1.1.md` with **only the referenced v1.2 chapters updated**
-to reflect implemented v1.2-A chain snapshot semantics (atomic chain CSV runner + quality predicates + deterministic Unknown policy).
+to reflect implemented v1.2-A/B chain semantics:
+- atomic chain CSV runner + quality predicates + deterministic Unknown policy (v1.2-A)
+- derived chain metrics v1 (PCR/OI change/skew-style) with deterministic rounding + Unknown behavior (v1.2-B)
 
 Updated sections in this snapshot:
-- Chapter 12.2.2 (chain context field types and runner semantics concretized for v1.2-A)
-- Chapter 13.2 and 13.4 (narrow chain-snapshot Unknown policy clarified for v1.2-A)
+- Chapter 12.2.2 (chain context field types and runner semantics concretized for v1.2-A/B)
+- Chapter 13.2 and 13.4 (narrow chain-snapshot Unknown policy clarified for v1.2-A/B)
 
 All other sections are inherited unchanged from the base spec.
 
@@ -920,6 +922,14 @@ Runner note (v1.2-A, implemented):
 - `sigmadsl run --context chain --input chain.csv --rules rules.sr`
 
 Chain-derived metrics (PCR/max pain/skew/etc.) remain deferred in v1.2; only quality predicates are executable.
+
+Implemented derived chain metrics (v1.2-B; v1 surface, conservative):
+- `chain.pcr_oi: Decimal` (put OI / call OI; quantized to 4 dp; Unknown on missing fields or zero denom)
+- `chain.pcr_volume: Decimal` (put volume / call volume; quantized to 4 dp; Unknown on missing fields or zero denom)
+- `chain.oi_change: Quantity` (net OI change vs prior snapshot; requires identical contract-id sets; Unknown otherwise)
+- `chain.oi_change_puts: Quantity`
+- `chain.oi_change_calls: Quantity`
+- `chain.iv_skew: Percent` (mean(put_iv) - mean(call_iv); quantized to 6 dp; Unknown on missing fields)
 
 ## 12.7 Compile-time validation pipeline (what “validate” means)
 

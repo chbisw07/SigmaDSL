@@ -287,6 +287,80 @@ sigmadsl replay --log /tmp/chain_runlog.json
 
 ### Known limitations (intentionally deferred)
 
-- no chain-derived metrics or analytics in expressions yet (PCR/max pain/skew/etc.)
+- derived chain metrics are delivered in v1.2-B; broader analytics remain deferred (PCR variants, max pain, skew surfaces beyond v1)
 - no per-contract chain iteration (`chain.contracts[...]`) or aggregations yet
 - no option chain live ingestion (fixtures/CSV only)
+
+---
+
+## Sprint v1.2-B — Derived chain metrics v1
+
+### Sprint goal
+
+Introduce a small, deterministic first set of chain-derived metrics over atomic chain snapshots:
+
+- PCR (OI and volume)
+- OI change (net + puts/calls) vs previous snapshot
+- skew-style metric (mean put IV - mean call IV)
+
+### What was implemented
+
+- **Metric computation module**
+  - `src/sigmadsl/chain_metrics.py` implements pure Decimal-backed functions:
+    - `chain.pcr_oi`, `chain.pcr_volume`
+    - `chain.oi_change`, `chain.oi_change_puts`, `chain.oi_change_calls`
+    - `chain.iv_skew`
+  - deterministic rounding:
+    - PCR: 4 dp (half-up)
+    - IV skew: 6 dp (half-up)
+- **Runtime + typing integration**
+  - `src/sigmadsl/builtins.py` / `src/sigmadsl/typechecker.py` expose metrics as `chain.*` fields
+  - `src/sigmadsl/evaluator.py` computes metrics in the chain runtime env and supports metric-level Unknown propagation
+- **CSV support**
+  - chain CSV now accepts `oi` as an alias for `open_interest` (still stored as `open_interest` internally)
+- **Examples + tests**
+  - example pack extended:
+    - `examples/option_chain_context/chain_metrics.sr`
+    - `examples/option_chain_context/data/chain_metrics.csv`
+    - `examples/option_chain_context/expected/run_chain_metrics.jsonl`
+  - numeric unit tests:
+    - `tests/test_chain_metrics_numeric.py`
+  - CLI golden:
+    - `tests/golden/run_chain_metrics.jsonl`
+  - replay equivalence test for chain-metrics runs
+
+### Unknown and fail-closed policy (v1.2-B)
+
+- Metrics are **Unknown** unless the chain snapshot is “quality OK” (complete + fresh + no flags).
+- Missing required fields yields Unknown (not zero).
+- Zero denominators yield Unknown.
+- OI change requires a prior snapshot and requires identical contract-id sets between prior/current; otherwise Unknown.
+
+Unknown predicate outcomes are surfaced as `Unknown` in `sigmadsl explain` and do not match.
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Run the derived-metrics example:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/chain_metrics.sr
+```
+
+Replay the derived-metrics run:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_metrics.csv --rules examples/option_chain_context/chain_metrics.sr --log-out /tmp/chain_metrics_runlog.json
+sigmadsl replay --log /tmp/chain_metrics_runlog.json
+```
+
+### Known limitations (intentionally deferred)
+
+- no strike-matched skew surfaces (ATM/OTM skew, term structure, smile, etc.)
+- no chain iteration/aggregation DSL surface beyond these named metrics
+- no max pain / GEX / probability models
