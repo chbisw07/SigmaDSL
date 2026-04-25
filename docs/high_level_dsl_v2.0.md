@@ -46,6 +46,25 @@ In v2.0-A:
 - no portfolio optimization
 - no new DSL syntax or new verbs
 
+## What v2.0-B adds (implemented)
+
+### Plan IR + `sigmadsl plan`
+
+v2.0-B introduces a small broker-agnostic **Plan IR** output contract.
+
+- Plan IR is generated from **effective intent decisions only**
+- it is deterministic and replay-safe
+- it carries no broker/exchange fields
+
+CLI:
+
+```bash
+sigmadsl run --profile intent --input bars.csv --rules path/to/rules.sr > decisions.jsonl
+sigmadsl plan --input decisions.jsonl > plans.json
+```
+
+See `docs/plan_ir.md`.
+
 ## Where to look
 
 - Intent resolution logic: `src/sigmadsl/intent_resolution.py`
@@ -53,4 +72,7 @@ In v2.0-A:
 - Intent output schema: `src/sigmadsl/decisions.py`
 - Risk gating behavior: `src/sigmadsl/risk_constraints.py`
 - Platform doc: `docs/intent_platform.md`
-
+- Plan IR doc: `docs/plan_ir.md`
+- Plan IR schema: `src/sigmadsl/plan_ir.py`
+- Planner: `src/sigmadsl/planner.py`
+- CLI: `src/sigmadsl/cli.py` (`sigmadsl plan`)

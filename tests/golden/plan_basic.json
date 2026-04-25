@@ -1,0 +1,56 @@
+[
+  {
+    "blocked_by": null,
+    "event_index": 0,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0001",
+    "rule_name": "EQ: Intent Demo",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-b",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0001",
+    "status": "planned",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:15:00"
+  },
+  {
+    "blocked_by": null,
+    "event_index": 1,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0002",
+    "rule_name": "EQ: Intent Demo",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-b",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0002",
+    "status": "planned",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:20:00"
+  },
+  {
+    "blocked_by": null,
+    "event_index": 2,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0003",
+    "rule_name": "EQ: Intent Demo",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-b",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0003",
+    "status": "planned",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:25:00"
+  }
+]

@@ -98,3 +98,80 @@ sigmadsl replay --log /tmp/intent_runlog.json
 
 ---
 
+## Sprint v2.0-B — Execution Planning IR
+
+### Sprint goal
+
+Introduce a deterministic, broker-agnostic Plan IR and a minimal CLI for generating it from effective intents:
+
+- convert decision JSONL → effective intents → plan records
+- preserve replay equivalence
+- keep risk fail-closed (blocked intents become blocked plans)
+
+### What was implemented
+
+- **Plan IR schema**
+  - implemented in `src/sigmadsl/plan_ir.py`
+  - per-record schema:
+    - `schema = sigmadsl.plan`
+    - `schema_version = 2.0-b`
+
+- **Planner**
+  - implemented in `src/sigmadsl/planner.py`
+  - `generate_plans(decisions, source=...)`:
+    - consumes decision JSON dicts (from JSONL)
+    - uses only `kind="intent"` with `is_effective=true`
+    - blocked intents map to `status="blocked"` and carry `blocked_by`
+    - overridden intents produce no plan record
+    - deterministic ordering + deterministic plan ids (`P0001`, …)
+
+- **CLI**
+  - implemented in `src/sigmadsl/cli.py`
+  - command:
+    - `sigmadsl plan --input decisions.jsonl`
+  - output:
+    - JSON array of plan records (`sigmadsl.plan`)
+
+### Tests / goldens
+
+- `tests/test_plan_ir_v2_0_b.py`
+  - schema correctness
+  - declare → planned plan
+  - cancel plan from effective cancel intent
+  - overridden intents ignored
+  - blocked intents → blocked plans
+  - malformed JSONL rejected
+  - replay equivalence: run vs replay produce identical plan output
+- goldens:
+  - `tests/golden/plan_basic.json`
+  - `tests/golden/plan_conflict.json`
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Manual workflow:
+
+```bash
+sigmadsl run --profile intent --input tests/fixtures/run/bars_one.csv --rules tests/fixtures/intents/intent_conflict.sr > /tmp/decisions.jsonl
+sigmadsl plan --input /tmp/decisions.jsonl > /tmp/plans.json
+```
+
+Replay-safe workflow:
+
+```bash
+sigmadsl run --profile intent --input tests/fixtures/run/bars_one.csv --rules tests/fixtures/intents/intent_conflict.sr --log-out /tmp/runlog.json
+sigmadsl replay --log /tmp/runlog.json > /tmp/decisions.jsonl
+sigmadsl plan --input /tmp/decisions.jsonl > /tmp/plans.json
+```
+
+### Known limitations (intentionally deferred)
+
+- no broker execution, routing, or venue selection
+- no plan diff UX (beyond existing runlog diff)
+- no portfolio optimization / multi-leg planning
+

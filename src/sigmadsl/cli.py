@@ -12,6 +12,7 @@ from .profile import profile_paths
 from .packaging import create_pack, validate_pack
 from .explain import explain_decision, explain_rule_at_event
 from .reporting import aggregate_report_from_decision_dicts, load_decision_dicts_jsonl
+from .planner import PlanOutput, generate_plans
 from .runner import (
     decision_jsonl_lines,
     replay_from_log,
@@ -438,6 +439,30 @@ def report(
         typer.echo(json.dumps(summary.to_dict(), sort_keys=True, indent=2))
     else:
         typer.echo(summary.to_text().rstrip("\n"))
+
+
+@app.command()
+def plan(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Decision JSONL output from run/replay"),
+):
+    """
+    Generate deterministic broker-agnostic Plan IR from effective intent decisions (Sprint v2.0-B).
+    """
+
+    decisions, diags = load_decision_dicts_jsonl(input)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=2)
+
+    plans, diags = generate_plans(decisions, source=input)
+    if diags:
+        for d in diags:
+            typer.echo(_format_diag(d))
+        raise typer.Exit(code=2)
+    assert plans is not None
+
+    typer.echo(PlanOutput(plans=tuple(plans)).to_json().rstrip("\n"))
 
 
 @app.command()
