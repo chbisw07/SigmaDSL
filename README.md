@@ -90,6 +90,12 @@ Run option-context rules against an atomic option snapshot CSV (Sprint v1.1-B):
 sigmadsl run --context option --input examples/option_context_rules/data/options_basic.csv --rules examples/option_context_rules/option_signals.sr
 ```
 
+Deterministically select a contract from a multi-contract snapshot bundle (Sprint v1.1-C):
+
+```bash
+sigmadsl run --context option --select atm --right CALL --input examples/options_contract_rules/data/options_bundle.csv --rules examples/options_contract_rules/option_selected_echo.sr
+```
+
 Explain a single decision:
 
 ```bash

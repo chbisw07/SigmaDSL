@@ -191,7 +191,12 @@ def run_option_from_csv_with_log(
     profile: DecisionProfile = DecisionProfile.signal,
     risk_rules_path: Path | None = None,
     contract_id: str | None = None,
-    engine_version: str = "v1.1-b",
+    select: str | None = None,
+    right: str | None = None,
+    expiry: str | None = None,
+    otm_rank: int = 1,
+    target_delta: str | None = None,
+    engine_version: str = "v1.1-c",
     log_out: Path | None,
 ) -> tuple[EvalResult | None, list[Diagnostic]]:
     """
@@ -202,7 +207,10 @@ def run_option_from_csv_with_log(
     - Context binding is explicit: rules must be authored with `in option:`.
     """
 
-    from .csv_input import load_option_events_csv_with_meta
+    from .csv_input import load_option_events_csv_with_meta, select_option_contract_id_from_csv
+    from .options_contracts import parse_option_right
+    from .options_selection import OptionSelectionRequest
+    from .runtime_models import dec
 
     compiled, sources, referenced_inds, rule_diags = load_compiled_rules_with_sources(rules_path, profile=profile)
     if rule_diags:
@@ -218,6 +226,61 @@ def run_option_from_csv_with_log(
                 file=rules_path,
             )
         ]
+
+    if contract_id is not None and select is not None:
+        return None, [
+            diag(
+                code="SD740",
+                severity=Severity.error,
+                message="Use either --contract-id or --select (not both)",
+                file=input_csv,
+                line=1,
+                column=1,
+            )
+        ]
+
+    if contract_id is None and select is not None:
+        right_parsed = parse_option_right(right) if right is not None else None
+        if right is not None and right_parsed is None:
+            return None, [
+                diag(
+                    code="SD740",
+                    severity=Severity.error,
+                    message="Invalid --right (expected CALL or PUT)",
+                    file=input_csv,
+                    line=1,
+                    column=1,
+                )
+            ]
+
+        target_delta_dec = None
+        if target_delta is not None:
+            try:
+                target_delta_dec = dec(target_delta)
+            except Exception:
+                return None, [
+                    diag(
+                        code="SD740",
+                        severity=Severity.error,
+                        message="Invalid --target-delta (expected decimal)",
+                        file=input_csv,
+                        line=1,
+                        column=1,
+                    )
+                ]
+
+        req = OptionSelectionRequest(
+            kind=select,
+            right=right_parsed,
+            expiry=expiry,
+            otm_rank=otm_rank,
+            target_delta=target_delta_dec,
+        )
+        selected_id, sel_diags = select_option_contract_id_from_csv(input_csv, req=req)
+        if sel_diags:
+            return None, sel_diags
+        assert selected_id is not None
+        contract_id = selected_id
 
     risk_compiled: list[CompiledRule] | None = None
     risk_sources: list[RuleSource] = []

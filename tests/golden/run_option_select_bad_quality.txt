@@ -1,0 +1,1 @@
+tests/fixtures/options/options_select_bad_quality.csv:1:1 SD752 error: No usable selection candidates at timestamp '2026-01-03T09:15:00'

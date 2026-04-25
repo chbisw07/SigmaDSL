@@ -9,6 +9,7 @@ from .diagnostics import Diagnostic, Severity, diag
 from .options_contracts import parse_option_contract_id, parse_option_right
 from .options_runtime import OptionEvent
 from .options_snapshots import check_option_snapshot_usable, parse_option_snapshot_dict
+from .options_selection import OptionSelectionCandidate, OptionSelectionRequest, select_contract_id
 from .runtime_models import Bar, UnderlyingEvent, dec
 
 
@@ -36,6 +37,7 @@ _OPT_OPTIONAL_COLUMNS = (
     "vega",
     "open_interest",
     "volume",
+    "underlying_price",
     "underlying_return_5m",
     "data_is_fresh",
     "session_is_regular",
@@ -75,6 +77,154 @@ def load_option_events_csv_with_meta(
 ) -> tuple[list[OptionEvent], CsvLoadMeta | None, list[Diagnostic]]:
     events, meta, diags = _load_option_events_csv_impl(path, contract_id=contract_id)
     return events, meta, diags
+
+
+def select_option_contract_id_from_csv(
+    path: Path, *, req: OptionSelectionRequest
+) -> tuple[str | None, list[Diagnostic]]:
+    """
+    Sprint v1.1-C: deterministically select a single contract_id from an option snapshot CSV.
+
+    Selection is based on the *earliest timestamp* present in the CSV (lexicographic min).
+    Candidate rows are the usable snapshot rows at that timestamp, one per contract_id.
+    """
+
+    text = path.read_text(encoding="utf-8")
+    reader = csv.DictReader(text.splitlines())
+    if reader.fieldnames is None:
+        return None, [diag(code="SD526", message="Option CSV is missing a header row", file=path)]
+
+    missing = [c for c in _OPT_REQUIRED_COLUMNS if c not in reader.fieldnames]
+    if missing:
+        return None, [
+            diag(
+                code="SD526",
+                message=f"Option CSV is missing required column(s): {', '.join(missing)}",
+                file=path,
+                severity=Severity.error,
+            )
+        ]
+
+    rows = list(reader)
+    if not rows:
+        return None, [diag(code="SD523", message="CSV has no data rows", file=path)]
+
+    timestamps = sorted({(row.get("timestamp") or "").strip() for row in rows if (row.get("timestamp") or "").strip()})
+    if not timestamps:
+        return None, [
+            diag(code="SD720", severity=Severity.error, message="Option CSV has no valid timestamp rows", file=path, line=1, column=1)
+        ]
+    selection_ts = min(timestamps)
+
+    # Collect at most one candidate row per contract id at the selection timestamp.
+    per_contract: dict[str, tuple[dict, int]] = {}
+    duplicates: list[str] = []
+    for row_i, row in enumerate(rows, start=2):
+        ts = (row.get("timestamp") or "").strip()
+        if ts != selection_ts:
+            continue
+        cid = (row.get("contract_id") or "").strip()
+        if not cid:
+            continue
+        if cid in per_contract:
+            duplicates.append(cid)
+        else:
+            per_contract[cid] = (row, row_i)
+
+    if duplicates:
+        return None, [
+            diag(
+                code="SD750",
+                severity=Severity.error,
+                message=f"Duplicate candidate rows for contract_id at selection timestamp {selection_ts!r}: {sorted(set(duplicates))!r}",
+                file=path,
+                line=1,
+                column=1,
+            )
+        ]
+
+    candidates: list[OptionSelectionCandidate] = []
+    diags: list[Diagnostic] = []
+
+    for cid, row_pair in sorted(per_contract.items(), key=lambda kv: kv[0]):
+        row, row_i = row_pair
+
+        snap_d: dict = {"timestamp": selection_ts, "contract_id": cid}
+        for k in _OPT_OPTIONAL_COLUMNS:
+            if k in ("venue", "underlying", "expiry", "strike", "right", "lot"):
+                continue
+            if k in row:
+                v = row.get(k)
+                if v is not None and str(v).strip() != "":
+                    if k in ("open_interest", "volume"):
+                        snap_d[k] = str(v).strip()
+                    elif k == "quality_flags":
+                        flags = [x.strip() for x in str(v).split(",") if x.strip()]
+                        snap_d[k] = flags
+                    else:
+                        snap_d[k] = str(v).strip()
+
+        if "data_is_fresh" in row:
+            raw = row.get("data_is_fresh")
+            if raw is not None and str(raw).strip() != "":
+                snap_d["data_is_fresh"] = _bool_optional(row, "data_is_fresh", default=True)
+
+        snap, snap_diags = parse_option_snapshot_dict(snap_d, file=path, line=row_i, column=1)
+        diags.extend(snap_diags)
+        if snap is None:
+            continue
+
+        ok, _issues = check_option_snapshot_usable(snap)
+        if not ok:
+            continue
+
+        underlying_price: Decimal | None = None
+        raw_up = row.get("underlying_price")
+        if raw_up is not None and str(raw_up).strip() != "":
+            try:
+                underlying_price = dec(str(raw_up).strip())
+            except Exception:
+                diags.append(
+                    diag(
+                        code="SD751",
+                        severity=Severity.error,
+                        message="Invalid underlying_price (expected decimal)",
+                        file=path,
+                        line=row_i,
+                        column=1,
+                    )
+                )
+                continue
+
+        candidates.append(
+            OptionSelectionCandidate(
+                contract=snap.contract,
+                canonical_id=snap.contract.canonical_id(),
+                underlying_price=underlying_price,
+                delta=snap.delta,
+            )
+        )
+
+    if diags:
+        return None, sorted(diags)
+
+    if not candidates:
+        return None, [
+            diag(
+                code="SD752",
+                severity=Severity.error,
+                message=f"No usable selection candidates at timestamp {selection_ts!r}",
+                file=path,
+                line=1,
+                column=1,
+            )
+        ]
+
+    selected, sel_diags = select_contract_id(req=req, candidates=candidates, file=path, line=1, column=1)
+    if sel_diags:
+        return None, sorted(sel_diags)
+    assert selected is not None
+    return selected, []
 
 
 def load_option_events_csv(path: Path, *, contract_id: str | None = None) -> tuple[list[OptionEvent], list[Diagnostic]]:
@@ -243,6 +393,12 @@ def _load_option_events_csv_impl(
             continue
 
         try:
+            underlying_price = _dec_optional(row, "underlying_price")
+        except _FieldError as e:
+            diags.append(diag(code="SD521", message=e.message, file=path, line=row_i, column=1))
+            continue
+
+        try:
             uret = _dec_optional(row, "underlying_return_5m")
         except _FieldError as e:
             diags.append(diag(code="SD521", message=e.message, file=path, line=row_i, column=1))
@@ -268,6 +424,7 @@ def _load_option_events_csv_impl(
                 index=len(events),
                 timestamp=ts,
                 snapshot=snap,
+                underlying_price=underlying_price,
                 session_is_regular=session_is_regular,
                 underlying_return_5m=uret,
             )

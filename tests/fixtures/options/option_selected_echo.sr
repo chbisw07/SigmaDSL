@@ -1,0 +1,4 @@
+rule "OPT: Selected Contract Echo" in option:
+    when true:
+        then emit_signal(kind="SELECTED", reason=option.contract_id)
+

@@ -111,6 +111,11 @@ def run(
         "--contract-id",
         help="Canonical option contract id (required if option CSV has multiple contracts)",
     ),
+    select: str | None = typer.Option(None, "--select", help="Option selection helper: atm, otm, or delta"),
+    right: str | None = typer.Option(None, "--right", help="Option right filter for selection: CALL or PUT"),
+    expiry: str | None = typer.Option(None, "--expiry", help="Expiry filter for selection (YYYY-MM-DD)"),
+    otm_rank: int = typer.Option(1, "--otm-rank", help="OTM rank (1 = nearest) for --select otm"),
+    target_delta: str | None = typer.Option(None, "--target-delta", help="Target delta for --select delta"),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
     risk_rules: Path | None = typer.Option(
         None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
@@ -137,6 +142,17 @@ def run(
     if ctx == "underlying" and contract_id is not None:
         typer.echo("--contract-id is only valid with --context option", err=True)
         raise typer.Exit(code=2)
+    if ctx == "underlying" and (select is not None or right is not None or expiry is not None or target_delta is not None):
+        typer.echo("--select/--right/--expiry/--target-delta are only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "underlying" and otm_rank != 1:
+        typer.echo("--otm-rank is only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "option" and contract_id is not None and (
+        select is not None or right is not None or expiry is not None or target_delta is not None or otm_rank != 1
+    ):
+        typer.echo("Use either --contract-id or --select flags (not both)", err=True)
+        raise typer.Exit(code=2)
 
     if ctx == "underlying":
         result, diags = run_underlying_from_csv_with_log(
@@ -149,6 +165,11 @@ def run(
             profile=p,
             risk_rules_path=risk_rules,
             contract_id=contract_id,
+            select=select,
+            right=right,
+            expiry=expiry,
+            otm_rank=otm_rank,
+            target_delta=target_delta,
             log_out=log_out,
         )
     if diags:
@@ -186,6 +207,11 @@ def explain(
         "--contract-id",
         help="Canonical option contract id (required if option CSV has multiple contracts)",
     ),
+    select: str | None = typer.Option(None, "--select", help="Option selection helper: atm, otm, or delta"),
+    right: str | None = typer.Option(None, "--right", help="Option right filter for selection: CALL or PUT"),
+    expiry: str | None = typer.Option(None, "--expiry", help="Expiry filter for selection (YYYY-MM-DD)"),
+    otm_rank: int = typer.Option(1, "--otm-rank", help="OTM rank (1 = nearest) for --select otm"),
+    target_delta: str | None = typer.Option(None, "--target-delta", help="Target delta for --select delta"),
     profile: str = typer.Option("signal", "--profile", help="Decision profile: signal, intent, or risk"),
     risk_rules: Path | None = typer.Option(
         None, "--risk-rules", exists=True, readable=True, help="Optional risk rule pack (applied as a separate phase)"
@@ -211,6 +237,17 @@ def explain(
     if ctx == "underlying" and contract_id is not None:
         typer.echo("--contract-id is only valid with --context option", err=True)
         raise typer.Exit(code=2)
+    if ctx == "underlying" and (select is not None or right is not None or expiry is not None or target_delta is not None):
+        typer.echo("--select/--right/--expiry/--target-delta are only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "underlying" and otm_rank != 1:
+        typer.echo("--otm-rank is only valid with --context option", err=True)
+        raise typer.Exit(code=2)
+    if ctx == "option" and contract_id is not None and (
+        select is not None or right is not None or expiry is not None or target_delta is not None or otm_rank != 1
+    ):
+        typer.echo("Use either --contract-id or --select flags (not both)", err=True)
+        raise typer.Exit(code=2)
 
     if ctx == "underlying":
         result, diags = run_underlying_from_csv_with_log(
@@ -223,6 +260,11 @@ def explain(
             profile=p,
             risk_rules_path=risk_rules,
             contract_id=contract_id,
+            select=select,
+            right=right,
+            expiry=expiry,
+            otm_rank=otm_rank,
+            target_delta=target_delta,
             log_out=None,
         )
     if diags:

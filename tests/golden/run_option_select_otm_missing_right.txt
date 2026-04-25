@@ -1,0 +1,1 @@
+tests/fixtures/options/options_selection.csv:1:1 SD741 error: OTM selection requires an explicit right filter (--right CALL|PUT)

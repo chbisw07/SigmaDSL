@@ -1,7 +1,7 @@
 # SigmaDSL — High-level DSL v1.1
 
-Status: Implemented (v1.1-A + v1.1-B option contract context).  
-Scope: **Sprint v1.1-A** (“Option instrument model + types”) and **Sprint v1.1-B** (“Option context binding”).
+Status: Implemented (v1.1-A/B/C option contract context).  
+Scope: **Sprint v1.1-A** (“Option instrument model + types”), **Sprint v1.1-B** (“Option context binding”), and **Sprint v1.1-C** (“Selection helpers + examples”).
 
 File role: High-level version summary (not a full spec copy-forward).
 
@@ -62,7 +62,18 @@ v1.1-B makes `in option:` rules runnable by adding:
 
 See `docs/option_context_rules.md` and `examples/option_context_rules/` for runnable examples.
 
+## v1.1-C — Selection helpers + examples
+
+v1.1-C adds deterministic contract selection helpers for multi-contract snapshot inputs:
+
+- `--select atm` / `--select otm` using an explicit `underlying_price` field
+- `--select delta` using explicit `delta` inputs
+- deterministic tie-breakers (distance, expiry, right, contract id)
+
+Runnable examples live under `examples/options_contract_rules/`.
+
 ## Known limitations / deferred items
 
 - no option chain context (v1.2+)
-- no automatic contract selection helpers (ATM/weekly selection, etc.)
+- no per-bar dynamic contract reselection (chain context needed)
+- no weekly/expiry discovery helpers (selection uses explicit snapshots and optional `--expiry` filter only)

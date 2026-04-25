@@ -878,6 +878,14 @@ Runner note (v1.1-B, implemented):
 - if multiple `contract_id` values exist in the input, the runner requires an explicit `--contract-id` (fail closed)
 - snapshot usability is enforced conservatively (see `docs/options_contract_context.md`)
 
+Selection helpers note (v1.1-C, implemented):
+- deterministic selection can replace manual `--contract-id` for multi-contract inputs:
+  - `--select atm --right CALL|PUT` (requires `underlying_price`)
+  - `--select otm --right CALL|PUT` (requires `underlying_price`)
+  - `--select delta --right CALL|PUT --target-delta <decimal>` (requires `delta`)
+- selection is based on the earliest timestamp snapshot set (lexicographic min)
+- tie-breakers are explicit and deterministic (distance, expiry, right, contract id)
+
 Canonical option contract identifier (v1.1-A, implemented):
 
 ```

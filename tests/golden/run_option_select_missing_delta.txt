@@ -1,0 +1,1 @@
+tests/fixtures/options/options_select_missing_delta.csv:1:1 SD747 error: Delta selection requires delta to be present on candidate rows

@@ -128,5 +128,74 @@ sigmadsl replay --log /tmp/opt_runlog.json
 ### Known limitations (intentionally deferred)
 
 - option chain context (`in chain:`) and derived chain metrics (v1.2+)
-- automatic contract selection helpers (ATM/weekly selection, etc.)
 - fuzzy broker symbol matching (explicit canonical ids only)
+
+---
+
+## Sprint v1.1-C — Selection helpers + examples
+
+### Sprint goal
+
+Add deterministic selection helpers over **explicit option snapshot inputs** so users can run a multi-contract bundle
+without manually specifying `--contract-id`:
+
+- ATM selection
+- nearest OTM selection
+- delta-based selection (when delta is present)
+
+### What was implemented
+
+- **Selection helper layer**
+  - `src/sigmadsl/options_selection.py` defines a small selection request + deterministic tie-breakers.
+- **CSV selection entrypoint**
+  - `src/sigmadsl/csv_input.py` adds `select_option_contract_id_from_csv(...)`:
+    - selection timestamp = earliest CSV timestamp (lexicographic min)
+    - candidates = usable snapshots at that timestamp (one per contract)
+    - fails closed on ambiguity, missing required fields, or no usable candidates
+- **CLI integration**
+  - `sigmadsl run` / `sigmadsl explain` (option context) now accept:
+    - `--select atm|otm|delta`
+    - `--right CALL|PUT`
+    - `--expiry YYYY-MM-DD` (optional candidate filter)
+    - `--otm-rank N` (nearest is `1`)
+    - `--target-delta <decimal>` for delta selection
+- **Required inputs**
+  - ATM/OTM selection requires `underlying_price` on candidate rows.
+  - delta selection requires `delta` on candidate rows.
+- **Examples**
+  - `examples/options_contract_rules/` demonstrates selection helpers with expected outputs.
+- **Tests**
+  - CLI goldens cover:
+    - ATM/OTM/delta selection outputs
+    - tie-breakers (earlier expiry)
+    - fail-closed errors for missing underlying_price / missing delta / missing right / bad quality
+    - replay equivalence for selection-driven runs
+
+### Tie-breakers (deterministic)
+
+1) primary distance metric (ATM strike distance / OTM distance / delta distance)  
+2) earlier expiry  
+3) right order (CALL before PUT)  
+4) canonical contract id lexical order
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Run selection examples:
+
+```bash
+sigmadsl run --context option --select atm --right CALL --input examples/options_contract_rules/data/options_bundle.csv --rules examples/options_contract_rules/option_selected_echo.sr
+sigmadsl run --context option --select otm --right CALL --input examples/options_contract_rules/data/options_bundle.csv --rules examples/options_contract_rules/option_selected_echo.sr
+sigmadsl run --context option --select delta --right CALL --target-delta 0.68 --input examples/options_contract_rules/data/options_bundle.csv --rules examples/options_contract_rules/option_selected_echo.sr
+```
+
+### Known limitations (intentionally deferred)
+
+- option chain context (`in chain:`) and derived chain metrics (v1.2+)
+- no per-bar dynamic contract reselection (that becomes chain context)
+- no fuzzy broker symbol matching (explicit canonical ids only)

@@ -16,6 +16,12 @@ Scope (v1.1-B):
 - deterministic context selection (`--contract-id` if needed)
 - fail-closed snapshot usability checks (`data_is_fresh`, quote presence, and `quality_flags`)
 
+Scope (v1.1-C):
+- deterministic selection helpers over explicit snapshot inputs:
+  - ATM selection
+  - nearest OTM selection
+  - delta-based selection (when delta is present)
+
 Out of scope (later sprints):
 - option chain modeling / chain snapshots (v1.2+)
 
@@ -113,6 +119,7 @@ Optional (if present, parsed deterministically):
 - quotes: `bid`, `ask`, `last`, `close`
 - IV/greeks: `iv`, `delta`, `gamma`, `theta`, `vega`
 - sizes: `open_interest`, `volume`
+- selection helpers: `underlying_price` (required for ATM/OTM selection)
 - guards: `data_is_fresh`, `quality_flags`
 - linkage: `underlying_return_5m`, `session_is_regular`
 
@@ -124,3 +131,28 @@ The runner fails closed if any selected-row snapshot is unusable:
 - any non-empty `quality_flags`
 
 This keeps execution deterministic and avoids silently producing decisions from explicitly flagged bad data.
+
+## Selection helpers (v1.1-C)
+
+v1.1-C adds deterministic selection helpers for multi-contract snapshot inputs.
+
+These helpers select a **single contract stream** before evaluation (still atomic option context):
+
+- `--select atm` (requires `--right CALL|PUT` and `underlying_price`)
+- `--select otm` (requires `--right CALL|PUT` and `underlying_price`; nearest is `--otm-rank 1`)
+- `--select delta` (requires `--right CALL|PUT` and `--target-delta`)
+
+Optional filters:
+- `--expiry YYYY-MM-DD` (restrict candidates to a specific expiry)
+
+Selection timestamp rule (deterministic):
+- selection is based on the **earliest timestamp** present in the CSV (lexicographic min)
+- candidate rows are the **usable** snapshot rows at that timestamp (one row per contract id)
+
+Tie-breakers (deterministic):
+1) primary distance metric (ATM strike distance / OTM distance / delta distance)
+2) earlier expiry
+3) right order (CALL before PUT)
+4) canonical contract id lexical order
+
+Examples: see `examples/options_contract_rules/`.

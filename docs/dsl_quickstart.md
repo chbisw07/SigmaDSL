@@ -315,3 +315,11 @@ If the CSV contains multiple `contract_id` values:
 ```bash
 sigmadsl run --context option --contract-id OPT:NSE:TCS:2026-01-29:100:CALL:150 --input options.csv --rules path/to/option_rules.sr
 ```
+
+Selection helpers (v1.1-C) can deterministically choose a single contract stream from a multi-contract snapshot CSV:
+
+```bash
+sigmadsl run --context option --select atm --right CALL --input options.csv --rules path/to/option_rules.sr
+sigmadsl run --context option --select otm --right CALL --input options.csv --rules path/to/option_rules.sr
+sigmadsl run --context option --select delta --right CALL --target-delta 0.50 --input options.csv --rules path/to/option_rules.sr
+```

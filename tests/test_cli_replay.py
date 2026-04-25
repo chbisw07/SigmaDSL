@@ -110,3 +110,31 @@ def test_cli_run_option_log_out_and_replay_equivalence(tmp_path: Path):
     assert d["input"]["csv"]["path"] == "tests/fixtures/options/options_basic.csv"
     assert len(d["input"]["events"]) == 3
     assert d["input"]["events"][0]["snapshot"]["contract_id"].startswith("OPT:")
+
+
+def test_cli_run_option_select_log_out_and_replay_equivalence(tmp_path: Path):
+    log_path = tmp_path / "opt_sel_runlog.json"
+
+    run_res = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "option",
+            "--select",
+            "atm",
+            "--right",
+            "CALL",
+            "--input",
+            "tests/fixtures/options/options_selection.csv",
+            "--rules",
+            "tests/fixtures/options/option_selected_echo.sr",
+            "--log-out",
+            str(log_path),
+        ],
+    )
+    assert run_res.exit_code == 0
+
+    replay_res = runner.invoke(app, ["replay", "--log", str(log_path)])
+    assert replay_res.exit_code == 0
+    assert replay_res.output == run_res.output

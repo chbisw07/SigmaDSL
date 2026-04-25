@@ -86,6 +86,7 @@ def option_event_to_dict(ev: OptionEvent) -> dict:
         "index": ev.index,
         "timestamp": ev.timestamp,
         "snapshot": ev.snapshot.to_dict(),
+        "underlying_price": dec_str(ev.underlying_price) if ev.underlying_price is not None else None,
         "session_is_regular": ev.session_is_regular,
         "underlying_return_5m": dec_str(ev.underlying_return_5m) if ev.underlying_return_5m is not None else None,
     }
@@ -142,6 +143,8 @@ def option_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[Option
         index = int(d["index"])
         timestamp = str(d["timestamp"])
         snap_d = d["snapshot"]
+        up = d.get("underlying_price")
+        underlying_price = dec(up) if up is not None else None
         session_is_regular = bool(d.get("session_is_regular", True))
         uret = d.get("underlying_return_5m")
         underlying_return_5m = dec(uret) if uret is not None else None
@@ -167,6 +170,7 @@ def option_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[Option
             index=index,
             timestamp=timestamp,
             snapshot=snap,
+            underlying_price=underlying_price,
             session_is_regular=session_is_regular,
             underlying_return_5m=underlying_return_5m,
         ),

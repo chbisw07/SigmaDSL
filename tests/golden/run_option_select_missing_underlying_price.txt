@@ -1,0 +1,1 @@
+tests/fixtures/options/options_multi_contract.csv:1:1 SD742 error: ATM/OTM selection requires underlying_price to be present on all candidate rows

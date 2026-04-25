@@ -34,6 +34,21 @@ sigmadsl run \
   --rules path/to/option_rules.sr
 ```
 
+Alternatively, Sprint v1.1-C adds selection helpers for multi-contract inputs:
+
+```bash
+sigmadsl run --context option --select atm --right CALL --input options.csv --rules path/to/option_rules.sr
+sigmadsl run --context option --select otm --right PUT --input options.csv --rules path/to/option_rules.sr
+sigmadsl run --context option --select delta --right CALL --target-delta 0.50 --input options.csv --rules path/to/option_rules.sr
+```
+
+Optional filters:
+
+```bash
+sigmadsl run --context option --select atm --right CALL --expiry 2026-01-29 --input options.csv --rules path/to/option_rules.sr
+sigmadsl run --context option --select otm --right CALL --otm-rank 2 --input options.csv --rules path/to/option_rules.sr
+```
+
 ## CSV format
 
 The full contract id format is documented in `docs/options_contract_context.md`.
@@ -43,6 +58,10 @@ At minimum, the CSV must include:
 - `timestamp`
 
 Quote and IV/greeks columns are optional, but rule evaluation will fail closed if a snapshot is unusable (see below).
+
+Selection helper note (v1.1-C):
+- `underlying_price` is required for `--select atm` and `--select otm`
+- `delta` is required for `--select delta`
 
 ## Data quality (fail-closed)
 
@@ -65,6 +84,4 @@ sigmadsl run \
 ## What is intentionally not implemented yet
 
 - option chain context (`in chain:`) and chain-derived metrics (v1.2+)
-- automatic contract selection helpers (ATM/weekly selection, etc.)
 - broker execution or planning/routing semantics
-
