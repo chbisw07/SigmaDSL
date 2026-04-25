@@ -73,6 +73,9 @@ Risk enforcement remains fail-closed (v1.0-B), but now:
 - risk constraints are applied only to **effective** intents
 - overridden intents are ignored by the risk gate
 
+Sprint v2.0-C adds an optional risk-aware plan view via `sigmadsl plan --with-risk`,
+which derives deterministic blocker reasons from the decision stream (still broker-agnostic).
+
 ## Example
 
 If an event produces:
@@ -81,4 +84,3 @@ If an event produces:
 - one `cancel_intent(...)`
 
 then the effective intent is the cancel, and all declares are marked overridden.
-

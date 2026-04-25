@@ -1266,7 +1266,7 @@ Minimum fields every decision should carry:
 
 ### 15.4.2 Plan IR output (`plans.json`)
 
-**Status: CURRENTLY DECIDED (v2.0-B implementation)**  
+**Status: CURRENTLY DECIDED (v2.0-B + v2.0-C implementation)**  
 Rationale: Enables a clean Intent→Plan boundary without broker execution.  
 Implications: Plan output is a separate schema (`sigmadsl.plan`) generated deterministically from effective intents.
 
@@ -1279,7 +1279,7 @@ sigmadsl plan --input decisions.jsonl > plans.json
 
 Plan record fields (minimum set):
 - `schema`: `sigmadsl.plan`
-- `schema_version`: `2.0-b`
+- `schema_version`: `2.0-b` (default) or `2.0-c` (risk-aware planning)
 - `plan_id` (deterministic per output stream: `P0001`, `P0002`, …)
 - `source_decision_id` (the intent decision id)
 - `rule_name`, `event_index`, `symbol`, `timestamp`
@@ -1288,12 +1288,21 @@ Plan record fields (minimum set):
 - `size = { quantity, percent }`
 - `status`: `planned` | `blocked` | `skipped`
 - `blocked_by` (list of constraint decision ids or null)
+- `risk` (v2.0-C; only when `--with-risk` is used):
+  - `status`: `allowed` | `blocked` | `unknown`
+  - `blocked_by`: list
+  - `reasons`: list of `{ decision_id, rule_name, constraint_kind, reason }`
 
 Generation rules (v2.0-B):
 - only `kind="intent"` decisions are considered
 - only `is_effective=true` intents produce plans
 - overridden intents (`is_effective=false`) produce no plan record
 - blocked intents (`enforcement.status="blocked"`) produce `status="blocked"` and carry `blocked_by`
+
+Risk-aware planning rules (v2.0-C):
+- `sigmadsl plan --with-risk` adds a `risk` section to every plan record
+- risk reason objects are derived deterministically from risk constraint decisions present in the same decision stream
+- if `decision.enforcement.status` is missing/malformed for an effective intent, planning fails closed with an error
 
 ### 15.4.1 v1.0-A runner output (`decisions.jsonl`)
 

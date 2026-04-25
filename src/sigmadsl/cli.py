@@ -444,6 +444,7 @@ def report(
 @app.command()
 def plan(
     input: Path = typer.Option(..., "--input", exists=True, readable=True, help="Decision JSONL output from run/replay"),
+    with_risk: bool = typer.Option(False, "--with-risk", help="Include risk metadata and fail closed on missing enforcement"),
 ):
     """
     Generate deterministic broker-agnostic Plan IR from effective intent decisions (Sprint v2.0-B).
@@ -455,7 +456,7 @@ def plan(
             typer.echo(_format_diag(d))
         raise typer.Exit(code=2)
 
-    plans, diags = generate_plans(decisions, source=input)
+    plans, diags = generate_plans(decisions, with_risk=with_risk, source=input)
     if diags:
         for d in diags:
             typer.echo(_format_diag(d))

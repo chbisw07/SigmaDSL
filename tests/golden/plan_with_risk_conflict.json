@@ -1,0 +1,25 @@
+[
+  {
+    "blocked_by": null,
+    "event_index": 0,
+    "intent_kind": null,
+    "plan_action": "cancel",
+    "plan_id": "P0001",
+    "risk": {
+      "blocked_by": [],
+      "reasons": [],
+      "status": "allowed"
+    },
+    "rule_name": "INTENT: cancel overrides declares",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-c",
+    "size": {
+      "percent": null,
+      "quantity": null
+    },
+    "source_decision_id": "D0004",
+    "status": "planned",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:15:00"
+  }
+]

@@ -175,3 +175,67 @@ sigmadsl plan --input /tmp/decisions.jsonl > /tmp/plans.json
 - no plan diff UX (beyond existing runlog diff)
 - no portfolio optimization / multi-leg planning
 
+---
+
+## Sprint v2.0-C — Risk enforcement integrated (plan-time view)
+
+### Sprint goal
+
+Expose a deterministic, fail-closed risk view on top of the existing Intent→Plan flow without adding any execution semantics:
+
+- add `sigmadsl plan --with-risk`
+- include deterministic blocker reasons when available
+- preserve replay parity for risk-aware planning
+- do not change default `sigmadsl plan` output
+
+### Policy (implemented)
+
+- Default (`sigmadsl plan`):
+  - unchanged v2.0-B output (`schema_version=2.0-b`)
+- Risk-aware (`sigmadsl plan --with-risk`):
+  - emits `schema_version=2.0-c`
+  - every plan includes:
+    - `risk.status`: `allowed` | `blocked` | `unknown`
+    - `risk.blocked_by`
+    - `risk.reasons`
+  - fails closed if the input decision stream is missing `decision.enforcement.status` for an effective intent
+
+### Reason extraction (implemented)
+
+Sources:
+- source intent decision:
+  - `enforcement.status`
+  - `enforcement.blocked_by`
+- risk constraint decisions in the same stream (`kind="constraint"`, `profile="risk"`)
+
+For each blocker id, a deterministic reason object is produced:
+- `{ decision_id, rule_name, constraint_kind, reason }`
+
+If a blocker id is present but the corresponding constraint decision is missing:
+- the plan remains blocked
+- the reason is recorded with `<missing>` placeholders (still fail-closed)
+
+### Tests / goldens
+
+- `tests/test_plan_risk_v2_0_c.py`
+- goldens:
+  - `tests/golden/plan_with_risk_allowed.json`
+  - `tests/golden/plan_with_risk_blocked.json`
+  - `tests/golden/plan_with_risk_conflict.json`
+
+Replay parity test:
+- run with `--log-out`, replay, then plan both with `--with-risk` and assert identical JSON.
+
+### Commands
+
+```bash
+.venv/bin/python -m pytest -q
+
+sigmadsl run --profile intent --input examples/risk_rules/data/bars_basic.csv --rules examples/risk_rules/packs/intent_declare --risk-rules examples/risk_rules/packs/risk_cap_position > /tmp/decisions.jsonl
+sigmadsl plan --input /tmp/decisions.jsonl --with-risk > /tmp/plans.json
+```
+
+### Deferred items
+
+- broker execution / routing / OMS behavior
+- plan-time optimization or multi-leg planning

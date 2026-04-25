@@ -65,6 +65,18 @@ sigmadsl plan --input decisions.jsonl > plans.json
 
 See `docs/plan_ir.md`.
 
+## What v2.0-C adds (implemented)
+
+### Risk-aware planning (`sigmadsl plan --with-risk`)
+
+v2.0-C integrates the existing fail-closed risk enforcement view into the Plan IR output surface (still broker-agnostic).
+
+- `sigmadsl plan --with-risk` includes a `risk` section for every plan:
+  - `risk.status`: allowed/blocked/unknown
+  - `risk.blocked_by`
+  - `risk.reasons` (derived deterministically from risk constraint decisions in the same stream)
+- planning fails closed if required enforcement metadata is missing
+
 ## Where to look
 
 - Intent resolution logic: `src/sigmadsl/intent_resolution.py`

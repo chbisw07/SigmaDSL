@@ -279,6 +279,25 @@ sigmadsl run --profile signal --input examples/risk_rules/data/bars_basic.csv --
 
 See `docs/risk_constraints.md` for the implemented semantics.
 
+## Plan IR (v2.0-B / v2.0-C)
+
+Sprint v2.0-B adds a broker-agnostic Plan IR generated from **effective intent decisions**:
+
+```bash
+sigmadsl run --profile intent --input tests/fixtures/run/bars_basic.csv --rules tests/fixtures/profiles/intent_ok.sr > decisions.jsonl
+sigmadsl plan --input decisions.jsonl > plans.json
+```
+
+Sprint v2.0-C adds a risk-aware view:
+
+```bash
+sigmadsl plan --input decisions.jsonl --with-risk > plans.json
+```
+
+See:
+- `docs/plan_ir.md`
+- `docs/high_level_dsl_v2.0.md`
+
 ## Reports (v1.0-C)
 
 Sprint v1.0-C adds a small reporting surface that aggregates outcomes per rule / symbol / day from a decision JSONL stream:
