@@ -298,6 +298,16 @@ See:
 - `docs/plan_ir.md`
 - `docs/high_level_dsl_v2.0.md`
 
+## Parity harness + adapter contracts (v2.0-D)
+
+Sprint v2.0-D adds a parity harness (pytest-level) that proves strict equivalence across:
+- backtest (`run`)
+- replay (`replay`)
+- simulated-live parity harness (deterministic event-by-event)
+
+It also adds adapter contract documentation:
+- `docs/adapter_contracts.md`
+
 ## Reports (v1.0-C)
 
 Sprint v1.0-C adds a small reporting surface that aggregates outcomes per rule / symbol / day from a decision JSONL stream:

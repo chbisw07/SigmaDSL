@@ -239,3 +239,61 @@ sigmadsl plan --input /tmp/decisions.jsonl --with-risk > /tmp/plans.json
 
 - broker execution / routing / OMS behavior
 - plan-time optimization or multi-leg planning
+
+---
+
+## Sprint v2.0-D — Parity harness + adapter contracts
+
+### Sprint goal
+
+Add a parity harness that proves deterministic equivalence across:
+- backtest mode (`run`)
+- replay mode (`replay`)
+- simulated-live mode (event-by-event parity harness)
+
+Also document adapter contracts and integration guidance for downstream systems.
+
+### What was implemented
+
+- **Parity harness module**
+  - implemented in `src/sigmadsl/parity.py`
+  - compares (strict equality):
+    - decisions JSONL
+    - plan JSON
+    - plan `--with-risk` JSON
+  - simulated-live semantics are deterministic and test-only:
+    - re-evaluates the growing input prefix and emits only new decisions by id
+
+- **Parity fixtures**
+  - JSON case files under `tests/fixtures/parity/`
+  - covers:
+    - basic signal (underlying)
+    - intent conflict (underlying)
+    - intent + risk blocked (underlying)
+    - option context (signal)
+    - chain context (signal)
+
+- **Parity tests + high-signal goldens**
+  - `tests/test_parity_harness_v2_0_d.py`
+  - goldens:
+    - `tests/golden/parity_basic_decisions.jsonl`
+    - `tests/golden/parity_intent_plan.json`
+    - `tests/golden/parity_with_risk_plan.json`
+
+- **Adapter contract documentation**
+  - `docs/adapter_contracts.md`
+  - defines responsibilities for downstream adapters (symbol mapping, validation, execution lifecycle)
+  - emphasizes non-executable blocked plans and broker-agnostic boundary
+
+### Commands
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+### Deferred items
+
+- user-facing `sigmadsl parity` CLI command (kept test-level in v2.0-D)
+- broker adapters, OMS lifecycle, routing, execution semantics

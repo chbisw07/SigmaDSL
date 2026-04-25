@@ -1,0 +1,8 @@
+{
+  "name": "chain_metrics",
+  "context": "chain",
+  "profile": "signal",
+  "input_csv": "../chain/chain_metrics.csv",
+  "rules": "../chain/chain_metrics.sr"
+}
+

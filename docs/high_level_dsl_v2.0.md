@@ -77,6 +77,25 @@ v2.0-C integrates the existing fail-closed risk enforcement view into the Plan I
   - `risk.reasons` (derived deterministically from risk constraint decisions in the same stream)
 - planning fails closed if required enforcement metadata is missing
 
+## What v2.0-D adds (implemented)
+
+### Parity harness (backtest / replay / simulated-live)
+
+v2.0-D adds a parity harness that proves deterministic equivalence across:
+- backtest mode (`sigmadsl run` on fixture inputs)
+- replay mode (`sigmadsl replay --log ...`)
+- simulated-live mode (deterministic event-by-event simulation over the same fixture inputs)
+
+The parity harness is test-level (pytest) for now; no user-facing CLI is added in v2.0-D.
+
+### Adapter contracts + integration guidance
+
+v2.0-D documents adapter boundaries and integration guidance:
+- SigmaDSL emits decisions and broker-agnostic Plan IR
+- adapters are responsible for broker-specific mapping and execution lifecycle
+
+See `docs/adapter_contracts.md`.
+
 ## Where to look
 
 - Intent resolution logic: `src/sigmadsl/intent_resolution.py`

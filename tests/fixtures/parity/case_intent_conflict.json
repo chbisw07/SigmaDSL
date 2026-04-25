@@ -1,0 +1,8 @@
+{
+  "name": "intent_conflict",
+  "context": "underlying",
+  "profile": "intent",
+  "input_csv": "../run/bars_one.csv",
+  "rules": "../intents/intent_conflict.sr"
+}
+

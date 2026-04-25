@@ -1548,8 +1548,19 @@ Parity means:
 - the same rule pack evaluated by the same engine should behave identically across:
   - “historical run” mode,
   - “replay” mode,
-  - (later) simulated-live modes,
+  - simulated-live modes,
 except for explicitly modeled differences (fees/slippage models), which must be deterministic and logged.
+
+Implemented parity proof (v2.0-D):
+- pytest parity harness compares **strict equality** of:
+  - decisions JSONL (`sigmadsl.decision`)
+  - plan JSON (`sigmadsl.plan`)
+  - risk-aware plan JSON (`sigmadsl.plan` with `schema_version="2.0-c"`)
+- simulated-live semantics are deterministic and test-only:
+  - consume the same fixture events event-by-event
+  - re-evaluate the growing prefix deterministically
+  - emit only newly-produced decisions (stable by decision id)
+  - no wall-clock time and no external calls
 
 ## 19.2 Fill and slippage models
 
@@ -1737,12 +1748,25 @@ Minimum security requirement (LOCKED):
 Rationale: Keeps DSL independent and integrable.  
 Implications: Define schemas and adapter contracts without building full integrations.
 
-Planned contracts:
-- market data adapter contract (input events schema),
-- plan adapter contract (output plan schema),
-- risk engine contract (phase separation and inputs/outputs).
+Implemented contracts (v1.0+ through v2.0):
+- decision output contract:
+  - `schema="sigmadsl.decision"` (`schema_version="1.0-b"`)
+- run log contract:
+  - `schema="sigmadsl.runlog"` (replayable, self-contained)
+- plan output contract:
+  - `schema="sigmadsl.plan"`
+  - `schema_version="2.0-b"` (plans)
+  - `schema_version="2.0-c"` (risk-aware plans)
 
-Schemas: PROVISIONAL; must stabilize by v1.0+.
+Adapter boundary (v2.0-D documentation):
+- SigmaDSL does not execute trades.
+- Adapters consume Plan IR and implement:
+  - symbol mapping,
+  - broker-specific validation,
+  - execution lifecycle,
+  - reconciliation.
+
+See `docs/adapter_contracts.md`.
 
 ---
 

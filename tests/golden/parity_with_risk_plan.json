@@ -1,0 +1,104 @@
+[
+  {
+    "blocked_by": [
+      "D0002"
+    ],
+    "event_index": 0,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0001",
+    "risk": {
+      "blocked_by": [
+        "D0002"
+      ],
+      "reasons": [
+        {
+          "constraint_kind": "max_position",
+          "decision_id": "D0002",
+          "reason": "cap_50",
+          "rule_name": "RISK: Cap max position 50"
+        }
+      ],
+      "status": "blocked"
+    },
+    "rule_name": "EQ: Always intent",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-c",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0001",
+    "status": "blocked",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:15:00"
+  },
+  {
+    "blocked_by": [
+      "D0004"
+    ],
+    "event_index": 1,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0002",
+    "risk": {
+      "blocked_by": [
+        "D0004"
+      ],
+      "reasons": [
+        {
+          "constraint_kind": "max_position",
+          "decision_id": "D0004",
+          "reason": "cap_50",
+          "rule_name": "RISK: Cap max position 50"
+        }
+      ],
+      "status": "blocked"
+    },
+    "rule_name": "EQ: Always intent",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-c",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0003",
+    "status": "blocked",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:20:00"
+  },
+  {
+    "blocked_by": [
+      "D0006"
+    ],
+    "event_index": 2,
+    "intent_kind": "TARGET_LONG",
+    "plan_action": "declare",
+    "plan_id": "P0003",
+    "risk": {
+      "blocked_by": [
+        "D0006"
+      ],
+      "reasons": [
+        {
+          "constraint_kind": "max_position",
+          "decision_id": "D0006",
+          "reason": "cap_50",
+          "rule_name": "RISK: Cap max position 50"
+        }
+      ],
+      "status": "blocked"
+    },
+    "rule_name": "EQ: Always intent",
+    "schema": "sigmadsl.plan",
+    "schema_version": "2.0-c",
+    "size": {
+      "percent": null,
+      "quantity": "100"
+    },
+    "source_decision_id": "D0005",
+    "status": "blocked",
+    "symbol": "TCS",
+    "timestamp": "2026-01-01T09:25:00"
+  }
+]

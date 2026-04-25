@@ -1,0 +1,9 @@
+{
+  "name": "intent_risk_blocked",
+  "context": "underlying",
+  "profile": "intent",
+  "input_csv": "../../../examples/risk_rules/data/bars_basic.csv",
+  "rules": "../../../examples/risk_rules/packs/intent_declare",
+  "risk_rules": "../../../examples/risk_rules/packs/risk_cap_position"
+}
+

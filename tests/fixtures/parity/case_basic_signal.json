@@ -1,0 +1,8 @@
+{
+  "name": "basic_signal",
+  "context": "underlying",
+  "profile": "signal",
+  "input_csv": "../run/bars_basic.csv",
+  "rules": "../eval/rules_basic.sr"
+}
+

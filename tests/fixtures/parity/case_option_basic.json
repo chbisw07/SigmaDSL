@@ -1,0 +1,8 @@
+{
+  "name": "option_basic",
+  "context": "option",
+  "profile": "signal",
+  "input_csv": "../options/options_basic.csv",
+  "rules": "../options/option_signals.sr"
+}
+
