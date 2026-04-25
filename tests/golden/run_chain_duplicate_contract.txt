@@ -1,0 +1,1 @@
+tests/fixtures/chain/chain_duplicate_contract.csv:1:1 SD762 error: Duplicate contract_id within chain snapshot: ['OPT:NSE:INFY:2026-01-29:1500:CALL:300']

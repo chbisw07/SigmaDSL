@@ -1,0 +1,36 @@
+Explain (rule)
+- rule: CHAIN: Unconditional
+- context: chain
+- event: CHAIN:NSE:INFY #0 @ 2026-01-01T09:15:00
+- fired: False
+- selected_branch: None
+
+Predicate outcomes
+- when: true => Unknown
+
+Why it did not fire
+- no branch matched
+
+Trace
+{
+  "event": {
+    "index": 0,
+    "symbol": "CHAIN:NSE:INFY",
+    "timestamp": "2026-01-01T09:15:00"
+  },
+  "rule": {
+    "actions": [],
+    "context": "chain",
+    "decisions_emitted": [],
+    "evaluated_branches": [
+      {
+        "branch_kind": "when",
+        "expr": "true",
+        "result": null
+      }
+    ],
+    "fired": false,
+    "rule_name": "CHAIN: Unconditional",
+    "selected_branch": null
+  }
+}

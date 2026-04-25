@@ -196,6 +196,97 @@ sigmadsl run --context option --select delta --right CALL --target-delta 0.68 --
 
 ### Known limitations (intentionally deferred)
 
-- option chain context (`in chain:`) and derived chain metrics (v1.2+)
+- chain-derived analytics (PCR/max pain/skew/OI concentration/etc.) remain deferred (v1.2-A delivers chain snapshot *quality* only)
 - no per-bar dynamic contract reselection (that becomes chain context)
 - no fuzzy broker symbol matching (explicit canonical ids only)
+
+---
+
+## Sprint v1.2-A — Chain schema + snapshot semantics
+
+### Sprint goal
+
+Introduce a minimal, deterministic **chain snapshot** input model and runnable `chain` context:
+
+- strict atomic chain snapshot schema
+- strict chain CSV loader (grouped by snapshot timestamp)
+- first-class quality predicates for author guardrails
+- deterministic Unknown policy for incomplete chain snapshots
+- run/replay support for `--context chain`
+
+### What was implemented
+
+- **Chain snapshot schema**
+  - `src/sigmadsl/chain_snapshots.py` introduces `ChainSnapshot` with an explicit schema/version:
+    - `schema="sigmadsl.chain_snapshot"`, `schema_version="1.2-a"`
+  - the snapshot embeds per-contract `OptionSnapshot` rows (v1.1) and carries explicit:
+    - `data_is_fresh`, `quality_flags`, `is_complete`, `has_unknowns`
+- **Chain runtime event**
+  - `src/sigmadsl/chain_runtime.py` introduces `ChainEvent` (atomic chain snapshot event).
+- **Chain CSV loader**
+  - `src/sigmadsl/csv_input.py` adds a strict loader:
+    - required columns: `snapshot_timestamp`, `contract_id`
+    - groups rows by snapshot timestamp into atomic chain events
+    - rejects duplicate `contract_id` within a snapshot (fail closed)
+    - rejects mixed venues/underlyings within a snapshot (fail closed)
+    - parses each row through the v1.1 option snapshot parser for consistent normalization
+- **Typed `in chain:` environment**
+  - `src/sigmadsl/builtins.py` and `src/sigmadsl/typechecker.py` add a minimal `chain.*` environment:
+    - timestamp: `chain.as_of` (with `chain.time` as an alias)
+    - quality: `chain.is_fresh`, `chain.is_complete`, `chain.has_unknowns`, `chain.quality_ok`
+- **Deterministic evaluation + Unknown policy**
+  - `src/sigmadsl/evaluator.py` adds `evaluate_chain(...)`:
+    - only quality predicates + action emission (no analytics)
+    - if `chain.has_unknowns` is true:
+      - predicates that don’t mention chain quality fields are recorded as **Unknown** and do not match
+      - `else` branches are disabled (fail closed)
+- **CLI + replay**
+  - `sigmadsl run` supports `--context chain`
+  - `--log-out` records `input.kind=chain` and embeds chain snapshot events
+  - `sigmadsl replay` replays chain runs deterministically from the embedded snapshots
+- **Examples + tests**
+  - example pack: `examples/option_chain_context/`
+  - CLI goldens + replay equivalence tests for chain context fixtures
+
+### Diagnostics (selected)
+
+- chain CSV header/shape:
+  - `SD760`: missing header/required columns
+  - `SD761`: empty `snapshot_timestamp`
+  - `SD762`: duplicate `contract_id` within a snapshot group
+  - `SD763` / `SD764`: mixed venue/underlying within a snapshot group
+- runner:
+  - `SD780`: no `in chain:` rules found in a pack
+
+### Commands to run
+
+Run tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Run the chain example:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_demo.csv --rules examples/option_chain_context/chain_quality.sr
+```
+
+Explain an Unknown predicate result (incomplete chain snapshot):
+
+```bash
+sigmadsl explain --context chain --rule "CHAIN: Unconditional" --event-index 0 --input tests/fixtures/chain/chain_incomplete.csv --rules tests/fixtures/chain/chain_unknown_policy.sr
+```
+
+Replay a chain run:
+
+```bash
+sigmadsl run --context chain --input tests/fixtures/chain/chain_complete.csv --rules tests/fixtures/chain/chain_ok.sr --log-out /tmp/chain_runlog.json
+sigmadsl replay --log /tmp/chain_runlog.json
+```
+
+### Known limitations (intentionally deferred)
+
+- no chain-derived metrics or analytics in expressions yet (PCR/max pain/skew/etc.)
+- no per-contract chain iteration (`chain.contracts[...]`) or aggregations yet
+- no option chain live ingestion (fixtures/CSV only)

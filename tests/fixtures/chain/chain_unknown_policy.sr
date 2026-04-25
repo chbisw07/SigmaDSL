@@ -1,0 +1,13 @@
+rule "CHAIN: Unconditional" in chain:
+    when true:
+        then emit_signal(kind="should_not_fire")
+
+rule "CHAIN: Unknown Guard" in chain:
+    when chain.has_unknowns:
+        then emit_signal(kind="chain_unknown", reason="has_unknowns")
+
+rule "CHAIN: Else Disabled" in chain:
+    when chain.quality_ok:
+        then emit_signal(kind="chain_ok")
+    else:
+        then emit_signal(kind="else_selected")

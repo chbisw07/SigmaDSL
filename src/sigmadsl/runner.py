@@ -5,7 +5,15 @@ from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
 from .decision_profiles import DecisionProfile
-from .evaluator import CompiledRule, EvalError, EvalResult, compile_source_file, evaluate_option, evaluate_underlying
+from .evaluator import (
+    CompiledRule,
+    EvalError,
+    EvalResult,
+    compile_source_file,
+    evaluate_chain,
+    evaluate_option,
+    evaluate_underlying,
+)
 from .indicators import INDICATOR_REGISTRY_VERSION, pinned_indicator_keys, referenced_indicator_keys
 from .linting import lint_text
 from .modules import load_modules_for_path, resolve_import_closure
@@ -23,6 +31,7 @@ from .runlog import (
 )
 from .runtime_models import UnderlyingEvent
 from .options_runtime import OptionEvent
+from .chain_runtime import ChainEvent
 from .typechecker import typecheck_source_file
 
 
@@ -342,6 +351,82 @@ def run_option_from_csv_with_log(
     return result, []
 
 
+def run_chain_from_csv_with_log(
+    *,
+    rules_path: Path,
+    input_csv: Path,
+    profile: DecisionProfile = DecisionProfile.signal,
+    engine_version: str = "v1.2-a",
+    log_out: Path | None,
+) -> tuple[EvalResult | None, list[Diagnostic]]:
+    """
+    Sprint v1.2-A: chain snapshot runner for `in chain:` rules.
+    """
+
+    from .csv_input import load_chain_events_csv_with_meta
+
+    compiled, sources, referenced_inds, rule_diags = load_compiled_rules_with_sources(rules_path, profile=profile)
+    if rule_diags:
+        return None, rule_diags
+
+    if not [c for c in compiled if c.rule.context == "chain"]:
+        return None, [
+            diag(
+                code="SD780",
+                severity=Severity.error,
+                message="No 'chain' context rules found in rule pack (expected rules authored with: in chain:)",
+                file=rules_path,
+            )
+        ]
+
+    events, meta, csv_diags = load_chain_events_csv_with_meta(input_csv)
+    if csv_diags:
+        return None, csv_diags
+    assert meta is not None
+
+    compiled_chain = [c for c in compiled if c.rule.context == "chain"]
+
+    try:
+        result = evaluate_chain(compiled_chain, events, profile=profile, engine_version=engine_version)
+    except EvalError as e:
+        return None, [
+            diag(
+                code="SD530",
+                severity=Severity.error,
+                message=f"Runtime evaluation error: {e}",
+                file=input_csv,
+            )
+        ]
+
+    if log_out is not None:
+        csv_text = input_csv.read_text(encoding="utf-8")
+        log = RunLog(
+            schema=RUNLOG_SCHEMA,
+            schema_version=RUNLOG_SCHEMA_VERSION,
+            engine_version=engine_version,
+            profile=profile.value,
+            input_kind="chain",
+            rules=tuple(sources),
+            risk_rules=None,
+            input_csv=CsvSourceMeta(
+                path=str(input_csv),
+                sha256=sha256_text(csv_text),
+                columns=meta.columns,
+                row_count=meta.row_count,
+            ),
+            events=tuple(events),
+            indicators=IndicatorsMeta(
+                registry_version=INDICATOR_REGISTRY_VERSION,
+                pinned=pinned_indicator_keys(),
+                referenced=referenced_inds,
+            ),
+        )
+        log_diags = write_runlog(log_out, log)
+        if log_diags:
+            return None, log_diags
+
+    return result, []
+
 def replay_from_log(*, log_path: Path, engine_version_override: str | None = None) -> tuple[EvalResult | None, list[Diagnostic]]:
     """
     Sprint 0.4-A: Load a run log and re-evaluate deterministically from embedded snapshots.
@@ -468,6 +553,22 @@ def replay_from_log(*, log_path: Path, engine_version_override: str | None = Non
                     risk_rules=rr_opt,
                     engine_version=engine_version,
                 ),
+                [],
+            )
+        if kind == "chain":
+            chain_events = [e for e in list(log.events) if isinstance(e, ChainEvent)]
+            if len(chain_events) != len(list(log.events)):
+                return None, [
+                    diag(
+                        code="SD544",
+                        severity=Severity.error,
+                        message="Run log input kind is 'chain' but events contain non-chain entries",
+                        file=log_path,
+                    )
+                ]
+            compiled_chain = [c for c in compiled if c.rule.context == "chain"]
+            return (
+                evaluate_chain(compiled_chain, chain_events, profile=profile, engine_version=engine_version),
                 [],
             )
         return None, [

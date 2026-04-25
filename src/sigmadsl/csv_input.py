@@ -8,8 +8,10 @@ from pathlib import Path
 from .diagnostics import Diagnostic, Severity, diag
 from .options_contracts import parse_option_contract_id, parse_option_right
 from .options_runtime import OptionEvent
-from .options_snapshots import check_option_snapshot_usable, parse_option_snapshot_dict
+from .options_snapshots import OptionSnapshot, check_option_snapshot_usable, parse_option_snapshot_dict
 from .options_selection import OptionSelectionCandidate, OptionSelectionRequest, select_contract_id
+from .chain_runtime import ChainEvent
+from .chain_snapshots import ChainSnapshot
 from .runtime_models import Bar, UnderlyingEvent, dec
 
 
@@ -41,6 +43,23 @@ _OPT_OPTIONAL_COLUMNS = (
     "underlying_return_5m",
     "data_is_fresh",
     "session_is_regular",
+    "quality_flags",
+)
+
+_CHAIN_REQUIRED_COLUMNS = ("snapshot_timestamp", "contract_id")
+_CHAIN_OPTIONAL_COLUMNS = (
+    "bid",
+    "ask",
+    "last",
+    "close",
+    "iv",
+    "delta",
+    "gamma",
+    "theta",
+    "vega",
+    "open_interest",
+    "volume",
+    "data_is_fresh",
     "quality_flags",
 )
 
@@ -240,6 +259,26 @@ def load_option_events_csv(path: Path, *, contract_id: str | None = None) -> tup
     """
 
     events, _, diags = _load_option_events_csv_impl(path, contract_id=contract_id)
+    return events, diags
+
+
+def load_chain_events_csv_with_meta(path: Path) -> tuple[list[ChainEvent], CsvLoadMeta | None, list[Diagnostic]]:
+    events, meta, diags = _load_chain_events_csv_impl(path)
+    return events, meta, diags
+
+
+def load_chain_events_csv(path: Path) -> tuple[list[ChainEvent], list[Diagnostic]]:
+    """
+    Sprint v1.2-A: strict CSV loader for atomic option chain snapshots.
+
+    Requirements:
+    - required columns: snapshot_timestamp, contract_id
+    - contracts are grouped into atomic chain snapshots by snapshot_timestamp
+    - duplicate contract_id within a snapshot_timestamp group is an error (fail closed)
+    - per-contract rows are parsed via the v1.1 option snapshot parser to reuse quantization/guards
+    """
+
+    events, _, diags = _load_chain_events_csv_impl(path)
     return events, diags
 
 
@@ -443,6 +482,204 @@ def _load_option_events_csv_impl(
         )
     elif not diags and not events:
         diags.append(diag(code="SD523", message="CSV has no data rows", file=path))
+
+    meta = CsvLoadMeta(columns=tuple(reader.fieldnames), row_count=len(events))
+    return events, meta, sorted(diags)
+
+
+def _load_chain_events_csv_impl(path: Path) -> tuple[list[ChainEvent], CsvLoadMeta | None, list[Diagnostic]]:
+    text = path.read_text(encoding="utf-8")
+    reader = csv.DictReader(text.splitlines())
+    if reader.fieldnames is None:
+        return [], None, [diag(code="SD760", message="Chain CSV is missing a header row", file=path)]
+
+    missing = [c for c in _CHAIN_REQUIRED_COLUMNS if c not in reader.fieldnames]
+    if missing:
+        return [], None, [
+            diag(
+                code="SD760",
+                message=f"Chain CSV is missing required column(s): {', '.join(missing)}",
+                file=path,
+                severity=Severity.error,
+            )
+        ]
+
+    rows = list(reader)
+    if not rows:
+        return [], CsvLoadMeta(columns=tuple(reader.fieldnames), row_count=0), [diag(code="SD523", message="CSV has no data rows", file=path)]
+
+    # Group rows by snapshot_timestamp (atomic chain events).
+    groups: dict[str, list[tuple[int, dict]]] = {}
+    for row_i, row in enumerate(rows, start=2):
+        ts = (row.get("snapshot_timestamp") or "").strip()
+        if not ts:
+            return [], None, [
+                diag(
+                    code="SD761",
+                    severity=Severity.error,
+                    message="Chain CSV row has empty 'snapshot_timestamp'",
+                    file=path,
+                    line=row_i,
+                    column=1,
+                )
+            ]
+        groups.setdefault(ts, []).append((row_i, row))
+
+    events: list[ChainEvent] = []
+    diags: list[Diagnostic] = []
+
+    for ts in sorted(groups.keys()):
+        diags_before = len(diags)
+        rows_at_ts = groups[ts]
+        seen: set[str] = set()
+        dupes: set[str] = set()
+        for row_i, row in rows_at_ts:
+            cid = (row.get("contract_id") or "").strip()
+            if not cid:
+                diags.append(diag(code="SD721", severity=Severity.error, message="Chain CSV row has empty 'contract_id'", file=path, line=row_i, column=1))
+                continue
+            if cid in seen:
+                dupes.add(cid)
+            seen.add(cid)
+        if dupes:
+            diags.append(
+                diag(
+                    code="SD762",
+                    severity=Severity.error,
+                    message=f"Duplicate contract_id within chain snapshot: {sorted(dupes)!r}",
+                    file=path,
+                    line=1,
+                    column=1,
+                )
+            )
+            continue
+
+        # Keep the snapshot self-contained: include all successfully parsed contract rows,
+        # even if some are unusable (missing quotes, stale, quality flags). Completeness and
+        # unknown semantics are represented via is_complete/has_unknowns.
+        contract_snaps: list[tuple[str, OptionSnapshot]] = []
+        total_rows = 0
+        usable_rows = 0
+        all_fresh = True
+        all_flags: set[str] = set()
+        venue: str | None = None
+        underlying: str | None = None
+        expiries: set[str] = set()
+
+        for row_i, row in rows_at_ts:
+            cid = (row.get("contract_id") or "").strip()
+            if not cid:
+                continue
+            total_rows += 1
+
+            # Parse snapshot via v1.1 option snapshot parser for consistency/quantization.
+            snap_d: dict = {"timestamp": ts, "contract_id": cid}
+            for k in _CHAIN_OPTIONAL_COLUMNS:
+                if k in row:
+                    v = row.get(k)
+                    if v is None or str(v).strip() == "":
+                        continue
+                    if k in ("open_interest", "volume"):
+                        snap_d[k] = str(v).strip()
+                    elif k == "quality_flags":
+                        flags = [x.strip() for x in str(v).split(",") if x.strip()]
+                        snap_d[k] = flags
+                    else:
+                        snap_d[k] = str(v).strip()
+
+            if "data_is_fresh" in row:
+                raw = row.get("data_is_fresh")
+                if raw is not None and str(raw).strip() != "":
+                    snap_d["data_is_fresh"] = _bool_optional(row, "data_is_fresh", default=True)
+
+            snap, snap_diags = parse_option_snapshot_dict(snap_d, file=path, line=row_i, column=1)
+            diags.extend(snap_diags)
+            if snap is None:
+                continue
+
+            if venue is None:
+                venue = snap.contract.venue
+            elif venue != snap.contract.venue:
+                diags.append(
+                    diag(
+                        code="SD763",
+                        severity=Severity.error,
+                        message="Mixed venues within a chain snapshot are not supported",
+                        file=path,
+                        line=row_i,
+                        column=1,
+                    )
+                )
+                continue
+
+            if underlying is None:
+                underlying = snap.contract.underlying
+            elif underlying != snap.contract.underlying:
+                diags.append(
+                    diag(
+                        code="SD764",
+                        severity=Severity.error,
+                        message="Mixed underlyings within a chain snapshot are not supported",
+                        file=path,
+                        line=row_i,
+                        column=1,
+                    )
+                )
+                continue
+
+            expiries.add(snap.contract.expiry.isoformat())
+            all_fresh = all_fresh and bool(snap.data_is_fresh)
+            all_flags.update(snap.quality_flags)
+
+            contract_snaps.append((snap.contract.canonical_id(), snap))
+
+            ok, _issues = check_option_snapshot_usable(snap)
+            if ok:
+                usable_rows += 1
+
+        # If this timestamp group produced any diagnostics, treat the snapshot as invalid and
+        # skip emitting an event for it, but continue processing other groups deterministically.
+        if len(diags) != diags_before:
+            continue
+
+        if venue is None or underlying is None:
+            diags.append(
+                diag(
+                    code="SD765",
+                    severity=Severity.error,
+                    message=f"Chain snapshot at {ts!r} has no valid contract rows",
+                    file=path,
+                    line=1,
+                    column=1,
+                )
+            )
+            continue
+
+        contract_snaps_sorted = [s for _cid, s in sorted(contract_snaps, key=lambda kv: kv[0])]
+
+        is_complete = (usable_rows == total_rows) and all_fresh and not all_flags
+        has_unknowns = not is_complete
+
+        snapshot = ChainSnapshot(
+            timestamp=ts,
+            venue=venue,
+            underlying=underlying,
+            expiries=tuple(sorted(expiries)),
+            contracts=tuple(contract_snaps_sorted),
+            data_is_fresh=all_fresh,
+            quality_flags=tuple(sorted(all_flags)),
+            is_complete=is_complete,
+            has_unknowns=has_unknowns,
+        )
+
+        events.append(
+            ChainEvent(
+                symbol=f"CHAIN:{venue}:{underlying}",
+                index=len(events),
+                timestamp=ts,
+                snapshot=snapshot,
+            )
+        )
 
     meta = CsvLoadMeta(columns=tuple(reader.fieldnames), row_count=len(events))
     return events, meta, sorted(diags)

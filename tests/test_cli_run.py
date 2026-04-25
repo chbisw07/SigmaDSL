@@ -383,3 +383,57 @@ def test_cli_run_format_json_is_stable():
     # JSON array output; keep this check conservative.
     assert result.output.startswith("[\n  {")
     assert '"id": "D0001"' in result.output
+
+
+def test_cli_run_chain_ok_jsonl_golden():
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_complete.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_ok.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/run_chain_ok.jsonl").read_text(encoding="utf-8")
+    assert result.output == golden
+
+
+def test_cli_run_chain_duplicate_contract_is_rejected():
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_duplicate_contract.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_ok.sr",
+        ],
+    )
+    assert result.exit_code != 0
+    golden = Path("tests/golden/run_chain_duplicate_contract.txt").read_text(encoding="utf-8")
+    assert result.output == golden
+
+
+def test_cli_run_chain_unknown_policy_jsonl_golden():
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_incomplete.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_unknown_policy.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/run_chain_unknown_policy.jsonl").read_text(encoding="utf-8")
+    assert result.output == golden

@@ -1,0 +1,7 @@
+rule "CHAIN: Quality OK" in chain:
+    when chain.quality_ok:
+        then emit_signal(kind="chain_ok")
+
+rule "CHAIN: Incomplete Chain" in chain:
+    when chain.has_unknowns:
+        then emit_signal(kind="chain_unknown", reason="has_unknowns")

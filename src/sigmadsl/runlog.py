@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .diagnostics import Diagnostic, Severity, diag
 from .decision_profiles import DECISION_SCHEMA, DECISION_SCHEMA_VERSION
+from .chain_runtime import ChainEvent
+from .chain_snapshots import CHAIN_SNAPSHOT_SCHEMA, CHAIN_SNAPSHOT_SCHEMA_VERSION, ChainSnapshot
 from .options_runtime import OptionEvent
 from .options_snapshots import parse_option_snapshot_dict
 from .runtime_models import Bar, UnderlyingEvent, dec, dec_str
@@ -89,6 +91,78 @@ def option_event_to_dict(ev: OptionEvent) -> dict:
         "underlying_price": dec_str(ev.underlying_price) if ev.underlying_price is not None else None,
         "session_is_regular": ev.session_is_regular,
         "underlying_return_5m": dec_str(ev.underlying_return_5m) if ev.underlying_return_5m is not None else None,
+    }
+
+
+def chain_snapshot_from_dict(d: dict, *, file: Path | None = None) -> tuple[ChainSnapshot | None, list[Diagnostic]]:
+    diags: list[Diagnostic] = []
+    try:
+        if d.get("schema") != CHAIN_SNAPSHOT_SCHEMA or d.get("schema_version") != CHAIN_SNAPSHOT_SCHEMA_VERSION:
+            diags.append(
+                diag(
+                    code="SD770",
+                    severity=Severity.error,
+                    message="Malformed chain snapshot schema/version in run log",
+                    file=file,
+                )
+            )
+            return None, diags
+        ts = str(d["timestamp"])
+        venue = str(d["venue"])
+        underlying = str(d["underlying"])
+        expiries = tuple(str(x) for x in d.get("expiries", []))
+        data_is_fresh = bool(d.get("data_is_fresh", True))
+        quality_flags = tuple(str(x) for x in d.get("quality_flags", []))
+        is_complete = bool(d.get("is_complete", False))
+        has_unknowns = bool(d.get("has_unknowns", False))
+        contracts_d = d.get("contracts", [])
+    except Exception as e:
+        return None, [
+            diag(
+                code="SD770",
+                severity=Severity.error,
+                message=f"Malformed chain snapshot in run log: {e}",
+                file=file,
+            )
+        ]
+
+    contracts: list = []
+    if not isinstance(contracts_d, list):
+        diags.append(
+            diag(code="SD770", severity=Severity.error, message="chain_snapshot.contracts must be a list", file=file)
+        )
+        return None, diags
+    for cd in contracts_d:
+        snap, snap_diags = parse_option_snapshot_dict(cd, file=file)
+        diags.extend(snap_diags)
+        if snap is not None:
+            contracts.append(snap)
+
+    if diags:
+        return None, sorted(diags)
+
+    return (
+        ChainSnapshot(
+            timestamp=ts,
+            venue=venue,
+            underlying=underlying,
+            expiries=tuple(sorted(set(expiries))),
+            contracts=tuple(sorted(contracts, key=lambda s: s.contract.canonical_id())),
+            data_is_fresh=data_is_fresh,
+            quality_flags=tuple(sorted(set(quality_flags))),
+            is_complete=is_complete,
+            has_unknowns=has_unknowns,
+        ),
+        [],
+    )
+
+
+def chain_event_to_dict(ev: ChainEvent) -> dict:
+    return {
+        "symbol": ev.symbol,
+        "index": ev.index,
+        "timestamp": ev.timestamp,
+        "snapshot": ev.snapshot.to_dict(),
     }
 
 
@@ -178,17 +252,48 @@ def option_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[Option
     )
 
 
+def chain_event_from_dict(d: dict, *, file: Path | None = None) -> tuple[ChainEvent | None, list[Diagnostic]]:
+    try:
+        symbol = str(d["symbol"])
+        index = int(d["index"])
+        timestamp = str(d["timestamp"])
+        snap_d = d["snapshot"]
+    except Exception as e:
+        return None, [
+            diag(
+                code="SD544",
+                severity=Severity.error,
+                message=f"Malformed chain event in run log: {e}",
+                file=file,
+            )
+        ]
+
+    snap, snap_diags = chain_snapshot_from_dict(snap_d, file=file)
+    if snap_diags:
+        return None, sorted(snap_diags)
+    assert snap is not None
+
+    return (
+        ChainEvent(
+            symbol=symbol,
+            index=index,
+            timestamp=timestamp,
+            snapshot=snap,
+        ),
+        [],
+    )
+
 @dataclass(frozen=True)
 class RunLog:
     schema: str
     schema_version: str
     engine_version: str
     profile: str | None
-    input_kind: str  # "underlying" | "option" (v1.1-B adds option)
+    input_kind: str  # "underlying" | "option" | "chain"
     rules: tuple[RuleSource, ...]
     risk_rules: tuple[RuleSource, ...] | None
     input_csv: CsvSourceMeta
-    events: tuple[UnderlyingEvent | OptionEvent, ...]
+    events: tuple[UnderlyingEvent | OptionEvent | ChainEvent, ...]
     indicators: IndicatorsMeta | None = None
 
     def to_dict(self) -> dict:
@@ -203,7 +308,9 @@ class RunLog:
                 "kind": self.input_kind,
                 "csv": self.input_csv.to_dict(),
                 "events": [
-                    underlying_event_to_dict(e) if self.input_kind == "underlying" else option_event_to_dict(e)  # type: ignore[arg-type]
+                    underlying_event_to_dict(e)
+                    if self.input_kind == "underlying"
+                    else option_event_to_dict(e) if self.input_kind == "option" else chain_event_to_dict(e)  # type: ignore[arg-type]
                     for e in self.events
                 ],
             },
@@ -318,7 +425,7 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
     except Exception:
         input_kind = "underlying"
 
-    events: list[UnderlyingEvent | OptionEvent] = []
+    events: list[UnderlyingEvent | OptionEvent | ChainEvent] = []
     diags: list[Diagnostic] = []
     if not isinstance(events_d, list):
         return None, [diag(code="SD544", severity=Severity.error, message="input.events must be a list", file=path)]
@@ -327,6 +434,8 @@ def load_runlog(path: Path) -> tuple[RunLog | None, list[Diagnostic]]:
             ev, ev_diags = underlying_event_from_dict(ev_d, file=path)
         elif input_kind == "option":
             ev, ev_diags = option_event_from_dict(ev_d, file=path)
+        elif input_kind == "chain":
+            ev, ev_diags = chain_event_from_dict(ev_d, file=path)
         else:
             return None, [
                 diag(

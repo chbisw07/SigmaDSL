@@ -15,6 +15,7 @@ from .reporting import aggregate_report_from_decision_dicts, load_decision_dicts
 from .runner import (
     decision_jsonl_lines,
     replay_from_log,
+    run_chain_from_csv_with_log,
     run_option_from_csv_with_log,
     run_underlying_from_csv_with_log,
 )
@@ -128,6 +129,7 @@ def run(
 
     - `--context underlying`: bars CSV (Sprint 0.3-B; logs added in 0.4-A)
     - `--context option`: option snapshot CSV (Sprint v1.1-B)
+    - `--context chain`: option chain snapshot CSV (Sprint v1.2-A)
     """
 
     p = parse_profile(profile)
@@ -136,16 +138,16 @@ def run(
         raise typer.Exit(code=2)
 
     ctx = context.strip().lower()
-    if ctx not in ("underlying", "option"):
-        typer.echo("Invalid --context (expected 'underlying' or 'option')", err=True)
+    if ctx not in ("underlying", "option", "chain"):
+        typer.echo("Invalid --context (expected 'underlying', 'option', or 'chain')", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and contract_id is not None:
+    if ctx != "option" and contract_id is not None:
         typer.echo("--contract-id is only valid with --context option", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and (select is not None or right is not None or expiry is not None or target_delta is not None):
+    if ctx != "option" and (select is not None or right is not None or expiry is not None or target_delta is not None):
         typer.echo("--select/--right/--expiry/--target-delta are only valid with --context option", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and otm_rank != 1:
+    if ctx != "option" and otm_rank != 1:
         typer.echo("--otm-rank is only valid with --context option", err=True)
         raise typer.Exit(code=2)
     if ctx == "option" and contract_id is not None and (
@@ -158,7 +160,7 @@ def run(
         result, diags = run_underlying_from_csv_with_log(
             rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=log_out
         )
-    else:
+    elif ctx == "option":
         result, diags = run_option_from_csv_with_log(
             rules_path=rules,
             input_csv=input,
@@ -170,6 +172,16 @@ def run(
             expiry=expiry,
             otm_rank=otm_rank,
             target_delta=target_delta,
+            log_out=log_out,
+        )
+    else:
+        if risk_rules is not None:
+            typer.echo("--risk-rules is not supported for --context chain in v1.2-A", err=True)
+            raise typer.Exit(code=2)
+        result, diags = run_chain_from_csv_with_log(
+            rules_path=rules,
+            input_csv=input,
+            profile=p,
             log_out=log_out,
         )
     if diags:
@@ -231,16 +243,16 @@ def explain(
         raise typer.Exit(code=2)
 
     ctx = context.strip().lower()
-    if ctx not in ("underlying", "option"):
-        typer.echo("Invalid --context (expected 'underlying' or 'option')", err=True)
+    if ctx not in ("underlying", "option", "chain"):
+        typer.echo("Invalid --context (expected 'underlying', 'option', or 'chain')", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and contract_id is not None:
+    if ctx != "option" and contract_id is not None:
         typer.echo("--contract-id is only valid with --context option", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and (select is not None or right is not None or expiry is not None or target_delta is not None):
+    if ctx != "option" and (select is not None or right is not None or expiry is not None or target_delta is not None):
         typer.echo("--select/--right/--expiry/--target-delta are only valid with --context option", err=True)
         raise typer.Exit(code=2)
-    if ctx == "underlying" and otm_rank != 1:
+    if ctx != "option" and otm_rank != 1:
         typer.echo("--otm-rank is only valid with --context option", err=True)
         raise typer.Exit(code=2)
     if ctx == "option" and contract_id is not None and (
@@ -253,7 +265,7 @@ def explain(
         result, diags = run_underlying_from_csv_with_log(
             rules_path=rules, input_csv=input, profile=p, risk_rules_path=risk_rules, log_out=None
         )
-    else:
+    elif ctx == "option":
         result, diags = run_option_from_csv_with_log(
             rules_path=rules,
             input_csv=input,
@@ -265,6 +277,16 @@ def explain(
             expiry=expiry,
             otm_rank=otm_rank,
             target_delta=target_delta,
+            log_out=None,
+        )
+    else:
+        if risk_rules is not None:
+            typer.echo("--risk-rules is not supported for --context chain in v1.2-A", err=True)
+            raise typer.Exit(code=2)
+        result, diags = run_chain_from_csv_with_log(
+            rules_path=rules,
+            input_csv=input,
+            profile=p,
             log_out=None,
         )
     if diags:

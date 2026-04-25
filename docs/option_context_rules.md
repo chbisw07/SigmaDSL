@@ -83,5 +83,5 @@ sigmadsl run \
 
 ## What is intentionally not implemented yet
 
-- option chain context (`in chain:`) and chain-derived metrics (v1.2+)
+- option chain-derived metrics (deferred); chain snapshot quality context is introduced in v1.2-A (see `docs/option_chain_context.md`)
 - broker execution or planning/routing semantics

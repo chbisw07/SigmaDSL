@@ -55,7 +55,7 @@ def explain_decision(result: EvalResult, decision_id: str) -> str | None:
         if bp.branch_kind == "else":
             continue
         expr = bp.expr or "<missing>"
-        lines.append(f"- {bp.branch_kind}: {expr} => {bp.result}\n")
+        lines.append(f"- {bp.branch_kind}: {expr} => {_predicate_result_text(bp.result)}\n")
     if emitting_rule.selected_branch == "else":
         lines.append("- else: selected (no prior branch matched)\n")
     if emitting_rule.actions:
@@ -106,7 +106,7 @@ def explain_rule_at_event(result: EvalResult, *, rule_name: str, event_index: in
             lines.append("- else\n")
             continue
         expr = bp.expr or "<missing>"
-        lines.append(f"- {bp.branch_kind}: {expr} => {bp.result}\n")
+        lines.append(f"- {bp.branch_kind}: {expr} => {_predicate_result_text(bp.result)}\n")
 
     lines.append("\n")
     if rt.fired:
@@ -185,3 +185,12 @@ def _constraint_line(d: object) -> str:
         return " ".join(parts)
     except Exception:
         return "<constraint decision not found>"
+
+
+def _predicate_result_text(v: bool | None) -> str:
+    # Deterministic human-readable predicate outcomes.
+    # - bool: Python's True/False (kept for backwards-compatible goldens)
+    # - None: "Unknown" (used by v1.2-A chain snapshot unknown policy)
+    if v is None:
+        return "Unknown"
+    return str(v)

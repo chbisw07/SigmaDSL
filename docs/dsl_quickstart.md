@@ -323,3 +323,20 @@ sigmadsl run --context option --select atm --right CALL --input options.csv --ru
 sigmadsl run --context option --select otm --right CALL --input options.csv --rules path/to/option_rules.sr
 sigmadsl run --context option --select delta --right CALL --target-delta 0.50 --input options.csv --rules path/to/option_rules.sr
 ```
+
+## Option chain snapshots (v1.2-A)
+
+Sprint v1.2-A adds a minimal runnable `chain` context for **atomic option chain snapshots** (quality predicates only):
+
+- strict chain snapshot CSV input (`--context chain`)
+- first-class quality predicates:
+  - `chain.is_fresh`, `chain.is_complete`, `chain.has_unknowns`, `chain.quality_ok`
+- deterministic Unknown policy on incomplete snapshots
+
+Run the example pack:
+
+```bash
+sigmadsl run --context chain --input examples/option_chain_context/data/chain_demo.csv --rules examples/option_chain_context/chain_quality.sr
+```
+
+See `docs/option_chain_context.md` for the CSV format and unknown policy.

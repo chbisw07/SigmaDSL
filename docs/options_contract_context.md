@@ -23,7 +23,7 @@ Scope (v1.1-C):
   - delta-based selection (when delta is present)
 
 Out of scope (later sprints):
-- option chain modeling / chain snapshots (v1.2+)
+- option chain modeling / chain snapshots (implemented separately in v1.2-A; see `docs/option_chain_context.md`)
 
 ## Canonical option contract id (implemented)
 

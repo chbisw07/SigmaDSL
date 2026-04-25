@@ -93,6 +93,25 @@ def option_env_types() -> dict[str, Type]:
     }
 
 
+def chain_env_types() -> dict[str, Type]:
+    """
+    Sprint v1.2-A: minimal field/type environment for `chain` context.
+
+    Scope: chain snapshot quality/atomicity predicates only (no analytics).
+    """
+
+    return {
+        # Timestamp identity for the atomic snapshot event.
+        # `chain.as_of` matches the DSL_v0 terminology; `chain.time` is kept as a stable alias.
+        "chain.as_of": TIMESTAMP,
+        "chain.time": TIMESTAMP,
+        "chain.is_fresh": BOOL,
+        "chain.is_complete": BOOL,
+        "chain.has_unknowns": BOOL,
+        "chain.quality_ok": BOOL,
+    }
+
+
 def verb_signatures() -> dict[str, VerbSignature]:
     """
     Minimal verb signatures for v0.2-A (used for argument type checking).

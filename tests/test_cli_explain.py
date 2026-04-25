@@ -84,3 +84,25 @@ def test_cli_explain_option_d0001_golden():
     assert result.exit_code == 0
     golden = Path("tests/golden/explain_option_d0001.txt").read_text(encoding="utf-8")
     assert result.output == golden
+
+
+def test_cli_explain_chain_unknown_predicate_golden():
+    result = runner.invoke(
+        app,
+        [
+            "explain",
+            "--context",
+            "chain",
+            "--rule",
+            "CHAIN: Unconditional",
+            "--event-index",
+            "0",
+            "--input",
+            "tests/fixtures/chain/chain_incomplete.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_unknown_policy.sr",
+        ],
+    )
+    assert result.exit_code == 0
+    golden = Path("tests/golden/explain_chain_rule_unknown_event0.txt").read_text(encoding="utf-8")
+    assert result.output == golden

@@ -138,3 +138,37 @@ def test_cli_run_option_select_log_out_and_replay_equivalence(tmp_path: Path):
     replay_res = runner.invoke(app, ["replay", "--log", str(log_path)])
     assert replay_res.exit_code == 0
     assert replay_res.output == run_res.output
+
+
+def test_cli_run_chain_log_out_and_replay_equivalence(tmp_path: Path):
+    log_path = tmp_path / "chain_runlog.json"
+
+    run_res = runner.invoke(
+        app,
+        [
+            "run",
+            "--context",
+            "chain",
+            "--input",
+            "tests/fixtures/chain/chain_complete.csv",
+            "--rules",
+            "tests/fixtures/chain/chain_ok.sr",
+            "--log-out",
+            str(log_path),
+        ],
+    )
+    assert run_res.exit_code == 0
+
+    replay_res = runner.invoke(app, ["replay", "--log", str(log_path)])
+    assert replay_res.exit_code == 0
+    assert replay_res.output == run_res.output
+
+    d = json.loads(log_path.read_text(encoding="utf-8"))
+    assert d["schema"] == "sigmadsl.runlog"
+    assert d["schema_version"] == "1.0-b"
+    assert d["profile"] == "signal"
+    assert d["input"]["kind"] == "chain"
+    assert d["input"]["csv"]["path"] == "tests/fixtures/chain/chain_complete.csv"
+    assert len(d["input"]["events"]) == 2
+    assert d["input"]["events"][0]["snapshot"]["schema"] == "sigmadsl.chain_snapshot"
+    assert d["input"]["events"][0]["snapshot"]["schema_version"] == "1.2-a"

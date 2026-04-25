@@ -32,6 +32,7 @@ from .expr import (
 )
 from .runtime_models import UnderlyingEvent, dec
 from .options_runtime import OptionEvent
+from .chain_runtime import ChainEvent
 from .trace import ActionTrace, BranchPredicateTrace, EventTrace, RuleTrace, RunTrace
 from .indicators import (
     IndicatorCache,
@@ -49,7 +50,7 @@ class EvalError(RuntimeError):
     pass
 
 
-RuntimeEvent = UnderlyingEvent | OptionEvent
+RuntimeEvent = UnderlyingEvent | OptionEvent | ChainEvent
 
 
 @dataclass(frozen=True)
@@ -864,6 +865,262 @@ def evaluate_option(
     return EvalResult(decisions=tuple(decisions), trace=RunTrace(engine_version=engine_version, events=tuple(event_traces)))
 
 
+def evaluate_chain(
+    rules: list[CompiledRule],
+    events: list[ChainEvent],
+    *,
+    profile: DecisionProfile = DecisionProfile.signal,
+    engine_version: str = "v1.2-a",
+) -> EvalResult:
+    """
+    Sprint v1.2-A: deterministic evaluation for `chain` context rules on atomic chain snapshots.
+
+    Scope:
+    - chain quality predicates only (no chain analytics yet)
+    - atomic snapshot semantics: each ChainEvent is evaluated as a unit
+    - deterministic unknown policy:
+      - if `chain.has_unknowns` is True and a predicate does not reference any chain quality fields,
+        the predicate result is recorded as Unknown and does not match.
+      - else branches are disabled when `chain.has_unknowns` is True (fail closed).
+    """
+
+    ordered_rules = sorted(rules, key=lambda r: r.order_key())
+    decisions: list[Decision] = []
+    event_traces: list[EventTrace] = []
+    decision_counter = 0
+    indicator_cache = IndicatorCache()
+    indicators: dict[str, IndicatorDef] = indicator_registry()
+
+    def next_id() -> str:
+        nonlocal decision_counter
+        decision_counter += 1
+        return f"D{decision_counter:04d}"
+
+    quality_fields = {"chain.is_fresh", "chain.is_complete", "chain.has_unknowns", "chain.quality_ok"}
+
+    def mentions_quality(node: ExprNode | None) -> bool:
+        if node is None:
+            return False
+        stack: list[ExprNode] = [node]
+        while stack:
+            n = stack.pop()
+            if isinstance(n, Attribute):
+                dn = dotted_name(n)
+                if dn in quality_fields:
+                    return True
+                # continue walking base/attr
+                stack.append(n.base)
+                stack.append(n.attr)
+                continue
+            if isinstance(n, UnaryOp):
+                stack.append(n.operand)
+                continue
+            if isinstance(n, BinaryOp):
+                stack.append(n.left)
+                stack.append(n.right)
+                continue
+            if isinstance(n, CompareOp):
+                stack.append(n.left)
+                stack.append(n.right)
+                continue
+            if isinstance(n, Call):
+                stack.append(n.func)
+                for a in n.args:
+                    stack.append(a)
+                for _k, v in n.kwargs:
+                    stack.append(v)
+                continue
+        return False
+
+    for pos, ev in enumerate(events):
+        if ev.index != pos:
+            raise EvalError(
+                "ChainEvent.index must match its position in the events list "
+                f"(expected {pos}, got {ev.index})"
+            )
+
+        rule_traces: list[RuleTrace] = []
+        history: list[RuntimeEvent] = list(events[: pos + 1])
+        has_unknowns = bool(ev.snapshot.has_unknowns)
+
+        for compiled in ordered_rules:
+            rule = compiled.rule
+            if rule.context != "chain":
+                continue
+
+            evaluated_branches: list[BranchPredicateTrace] = []
+            selected_branch: ast.Branch | None = None
+            selected_kind: str | None = None
+            action_traces: list[ActionTrace] = []
+
+            for br in rule.branches:
+                if br.kind == "else":
+                    evaluated_branches.append(BranchPredicateTrace(branch_kind="else", expr=None, result=None))
+                    if selected_branch is None and not has_unknowns:
+                        selected_branch = br
+                        selected_kind = "else"
+                    break
+
+                assert br.condition is not None
+                if has_unknowns and not mentions_quality(br.condition.node):
+                    evaluated_branches.append(
+                        BranchPredicateTrace(branch_kind=br.kind, expr=br.condition.text, result=None)
+                    )
+                    continue
+
+                result = _eval_predicate(br.condition.node, ev, history, indicator_cache, indicators)
+                evaluated_branches.append(
+                    BranchPredicateTrace(branch_kind=br.kind, expr=br.condition.text, result=result)
+                )
+                if result and selected_branch is None:
+                    selected_branch = br
+                    selected_kind = br.kind
+                    break
+
+            emitted_ids: list[str] = []
+            if selected_branch is not None and selected_kind is not None:
+                allowed_verbs = allowed_verbs_for_profile(profile)
+                for action_index, then_line in enumerate(selected_branch.actions):
+                    verb = then_line.call.name
+                    if verb not in allowed_verbs:
+                        raise EvalError(f"Verb {verb!r} is not allowed for profile {profile.value!r}")
+                    args_items = [
+                        (a.name, _eval_value(a.value.node, ev, history, indicator_cache, indicators))
+                        for a in then_line.call.args
+                    ]
+                    args = {k: v for k, v in sorted(args_items, key=lambda kv: kv[0])}
+                    did = next_id()
+                    emitted_ids.append(did)
+                    action_traces.append(ActionTrace(verb=verb, args=args, decision_id=did))
+
+                    trace_ref = {"event_index": ev.index, "rule_name": rule.name, "action_index": action_index}
+                    enforcement = DecisionEnforcement(status="allowed", blocked_by=())
+
+                    if verb == "emit_signal":
+                        kind = args.get("kind")
+                        reason = args.get("reason")
+                        strength = args.get("strength")
+                        if not isinstance(kind, str):
+                            raise EvalError("emit_signal.kind must be a string")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("emit_signal.reason must be a string")
+                        if strength is not None and not isinstance(strength, Decimal):
+                            raise EvalError("emit_signal.strength must be a number")
+                        decisions.append(
+                            SignalDecision(
+                                id=did,
+                                kind="signal",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                signal_kind=kind,
+                                reason=reason,
+                                strength=strength,
+                            )
+                        )
+                    elif verb == "annotate":
+                        note = args.get("note")
+                        if not isinstance(note, str):
+                            raise EvalError("annotate.note must be a string")
+                        decisions.append(
+                            AnnotationDecision(
+                                id=did,
+                                kind="annotation",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                note=note,
+                            )
+                        )
+                    elif verb == "declare_intent":
+                        ik = args.get("kind")
+                        qty = args.get("quantity")
+                        pct = args.get("percent")
+                        reason = args.get("reason")
+                        if not isinstance(ik, str):
+                            raise EvalError("declare_intent.kind must be a string")
+                        if qty is not None and not isinstance(qty, Decimal):
+                            raise EvalError("declare_intent.quantity must be a number")
+                        if pct is not None and not isinstance(pct, Decimal):
+                            raise EvalError("declare_intent.percent must be a number")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("declare_intent.reason must be a string")
+                        decisions.append(
+                            IntentDecision(
+                                id=did,
+                                kind="intent",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                intent_action="declare",
+                                intent_kind=ik,
+                                quantity=qty,
+                                percent=pct,
+                                reason=reason,
+                            )
+                        )
+                    elif verb == "cancel_intent":
+                        reason = args.get("reason")
+                        if reason is not None and not isinstance(reason, str):
+                            raise EvalError("cancel_intent.reason must be a string")
+                        decisions.append(
+                            IntentDecision(
+                                id=did,
+                                kind="intent",
+                                profile=profile,
+                                verb=verb,
+                                rule_name=rule.name,
+                                context=rule.context,
+                                symbol=ev.symbol,
+                                event_index=ev.index,
+                                timestamp=ev.timestamp,
+                                trace_ref=trace_ref,
+                                enforcement=enforcement,
+                                intent_action="cancel",
+                                intent_kind=None,
+                                quantity=None,
+                                percent=None,
+                                reason=reason,
+                            )
+                        )
+                    else:
+                        raise EvalError(f"Unsupported verb at runtime: {verb!r}")
+
+            rule_traces.append(
+                RuleTrace(
+                    rule_name=rule.name,
+                    context=rule.context,
+                    evaluated_branches=tuple(evaluated_branches),
+                    selected_branch=selected_kind,
+                    fired=bool(emitted_ids),
+                    decisions_emitted=tuple(emitted_ids),
+                    actions=tuple(action_traces),
+                )
+            )
+
+        event_traces.append(EventTrace(symbol=ev.symbol, index=ev.index, timestamp=ev.timestamp, rules=tuple(rule_traces)))
+
+    return EvalResult(decisions=tuple(decisions), trace=RunTrace(engine_version=engine_version, events=tuple(event_traces)))
+
+
 def _runtime_env(ev: RuntimeEvent, history: list[RuntimeEvent]) -> dict[str, object]:
     if isinstance(ev, UnderlyingEvent):
         bar = ev.bar
@@ -884,6 +1141,18 @@ def _runtime_env(ev: RuntimeEvent, history: list[RuntimeEvent]) -> dict[str, obj
         }
         if ev.underlying_return_5m is not None:
             env["underlying.return_5m"] = ev.underlying_return_5m
+        return env
+
+    if isinstance(ev, ChainEvent):
+        snap = ev.snapshot
+        env: dict[str, object] = {
+            "chain.as_of": ev.timestamp,
+            "chain.time": ev.timestamp,  # alias
+            "chain.is_fresh": bool(snap.data_is_fresh) and not bool(snap.quality_flags),
+            "chain.is_complete": bool(snap.is_complete),
+            "chain.has_unknowns": bool(snap.has_unknowns),
+            "chain.quality_ok": bool(snap.is_complete) and bool(snap.data_is_fresh) and not bool(snap.quality_flags),
+        }
         return env
 
     # option snapshot event

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import ast
-from .builtins import function_names, option_env_types, underlying_env_types, verb_signatures
+from .builtins import chain_env_types, function_names, option_env_types, underlying_env_types, verb_signatures
 from .diagnostics import Diagnostic, Severity, diag
 from .expr import (
     Attribute,
@@ -54,12 +54,15 @@ def typecheck_source_file(source_file: ast.SourceFile) -> list[Diagnostic]:
     file = source_file.path
 
     for rule in source_file.rules:
-        if rule.context not in ("underlying", "option"):
+        if rule.context not in ("underlying", "option", "chain"):
             diags.append(
                 diag(
                     code="SD303",
                     severity=Severity.error,
-                    message=f"Unsupported context for v0.2 type checking: {rule.context!r} (expected 'underlying' or 'option')",
+                    message=(
+                        "Unsupported context for type checking: "
+                        f"{rule.context!r} (expected 'underlying', 'option', or 'chain')"
+                    ),
                     file=file,
                     line=rule.span.line,
                     column=rule.span.column,
@@ -67,7 +70,12 @@ def typecheck_source_file(source_file: ast.SourceFile) -> list[Diagnostic]:
             )
             continue
 
-        names = underlying_env_types() if rule.context == "underlying" else option_env_types()
+        if rule.context == "underlying":
+            names = underlying_env_types()
+        elif rule.context == "option":
+            names = option_env_types()
+        else:
+            names = chain_env_types()
         env = _Env(file=file, context=rule.context, names=names)
 
         for branch in rule.branches:

@@ -8,7 +8,7 @@ This repository currently implements:
 - **Phase B** through **Sprint 0.4-B** (CSV runner + JSON decisions + replay + diff + explain, verified via fixtures/goldens)
 - **Phase C** through **Sprint 0.5-A** (indicator registry + deterministic windows + numeric goldens)
 - **Phase E** through **Sprint v1.0-C** (profiles + risk gating + report + UX/docs polish)
-- **Phase F** through **Sprint v1.1-B** (option contract model + atomic snapshot runner; `in option:` rules runnable via `--context option`)
+- **Phase F** through **Sprint v1.2-A** (option contract model + option snapshot runner + chain snapshot quality context)
 
 ## DSL version docs
 
@@ -21,6 +21,7 @@ This repository currently implements:
 - `docs/high_level_dsl_v0.6.md` (v0.6 snapshot: deterministic imports + module layout)
 - `docs/high_level_dsl_v1.0.md` (v1.0 snapshot: profiles + stable schema + risk gating)
 - `docs/high_level_dsl_v1.1.md` (v1.1 snapshot: option contract model + snapshot inputs)
+- `docs/high_level_dsl_v1.2.md` (v1.2 snapshot: atomic chain snapshots + quality predicates + Unknown policy)
 
 True spec version docs follow `docs/dsl_vX.Y.md` and are created only when a release requires
 spec-level copy-forward updates beyond `docs/DSL_v0.md`.
@@ -32,6 +33,7 @@ Current spec snapshot docs:
 - `docs/dsl_v0.6.md` (v0.6-A: imports + library layout semantics concretized)
 - `docs/dsl_v1.0.md` (v1.0-A/B: profiles + stable schema + risk constraints)
 - `docs/dsl_v1.1.md` (v1.1-A: option contract identifiers + snapshot schema concretized)
+- `docs/dsl_v1.2.md` (v1.2-A: chain snapshot atomicity + quality semantics concretized)
 
 ## Install (dev)
 
